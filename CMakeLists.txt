@@ -35,11 +35,11 @@ endif()
 option(SPP_TIDY "Enable linting with clang-tidy" OFF)
 
 if (SPP_TIDY)
-  find_program(SPP_CLANG_TIDY_EXE NAMES "clang-tidy")
+  find_program(SPP_CLANG_TIDY_EXE NAMES "clang-tidy-18")
   if (SPP_CLANG_TIDY_EXE)
     set(CMAKE_CXX_CLANG_TIDY "${SPP_CLANG_TIDY_EXE}")
   else()
-    message(FATAL_ERROR "clang-tidy not found!")
+    message(FATAL_ERROR "clang-tidy-18 not found!")
   endif()
 endif()
 
