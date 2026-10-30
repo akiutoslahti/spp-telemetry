@@ -64,7 +64,7 @@ Presets live in `CMakePresets.json`. List them with `cmake --list-presets`. The 
 - `cmake --preset san && cmake --build --preset san && ctest --preset san` (Debug with ASan and UBSan)
 - `cmake --preset release && cmake --build --preset release`
 - `cmake --preset tidy && cmake --build --preset tidy` (clang-tidy)
-- `clang-format --dry-run --Werror $(git ls-files '*.cpp' '*.hpp')`
+- `tools/format.sh --check` (clang-format 18 check on all tracked `*.cpp` and `*.hpp`). `tools/format.sh` without flags formats in place; that one is mine only.
 - `cd tools/spp-gen && python -m pytest && mypy --strict src`
 - Buildroot, from a sibling checkout of Buildroot: `make BR2_EXTERNAL=$(pwd)/br2-external -C ../buildroot tmd_qemu_aarch64_defconfig`, then `make -C ../buildroot`, then `make -C ../buildroot tmd-rebuild` for iterations.
 
