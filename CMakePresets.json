@@ -2,12 +2,25 @@
   "version": 8,
   "configurePresets": [
     {
+      "name": "base",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}"
+    },
+    {
       "name": "debug",
       "displayName": "Debug",
-      "generator": "Ninja",
-      "binaryDir": "build/debug",
+      "inherits": "base",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "san",
+      "displayName": "Debug with ASan and UBSan",
+      "inherits": "debug",
+      "cacheVariables": {
+        "SPP_SANITIZE": "ON"
       }
     }
   ],
@@ -15,14 +28,30 @@
     {
       "name": "debug",
       "configurePreset": "debug"
+    },
+    {
+      "name": "san",
+      "configurePreset": "san"
     }
   ],
   "testPresets": [
     {
       "name": "debug",
       "configurePreset": "debug",
-      "output": {"outputOnFailure": true},
-      "execution": {"noTestsAction": "error"}
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "noTestsAction": "error"
+      }
+    },
+    {
+      "name": "san",
+      "configurePreset": "san",
+      "inherits": "debug",
+      "environment": {
+        "UBSAN_OPTIONS": "print_stacktrace=1"
+      }
     }
   ]
 }
