@@ -1,0 +1,27 @@
+name: Test project
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+jobs:
+  test:
+    name: Test (${{ matrix.compiler }})
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [ g++, clang++ ]
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Configure
+        run: cmake -DCMAKE_CXX_COMPILER=${{ matrix.compiler }} --preset debug
+
+      - name: Build
+        run: cmake --build --preset debug
+
+      - name: Test
+        run: ctest --preset debug
