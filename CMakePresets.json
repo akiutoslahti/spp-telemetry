@@ -22,6 +22,15 @@
       "cacheVariables": {
         "SPP_SANITIZE": "ON"
       }
+    },
+    {
+      "name": "tidy",
+      "displayName": "Lint with clang-tidy",
+      "inherits": "debug",
+      "cacheVariables": {
+        "SPP_TIDY": "ON",
+        "CMAKE_CXX_COMPILER": "clang++"
+      }
     }
   ],
   "buildPresets": [
@@ -32,6 +41,10 @@
     {
       "name": "san",
       "configurePreset": "san"
+    },
+    {
+      "name": "tidy",
+      "configurePreset": "tidy"
     }
   ],
   "testPresets": [

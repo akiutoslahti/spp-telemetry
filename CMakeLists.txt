@@ -31,6 +31,17 @@ if (BUILD_TESTING)
   include(Catch)
 endif()
 
+option(SPP_TIDY "Enable linting with clang-tidy" OFF)
+
+if (SPP_TIDY)
+  find_program(SPP_CLANG_TIDY_EXE NAMES "clang-tidy")
+  if (SPP_CLANG_TIDY_EXE)
+    set(CMAKE_CXX_CLANG_TIDY "${SPP_CLANG_TIDY_EXE}")
+  else()
+    message(FATAL_ERROR "clang-tidy not found!")
+  endif()
+endif()
+
 add_library(project-warnings INTERFACE)
 target_compile_options(project-warnings INTERFACE -Wall -Wextra -Wpedantic -Wconversion -Wshadow -Werror)
 

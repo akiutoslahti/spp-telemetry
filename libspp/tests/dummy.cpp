@@ -1,5 +1,4 @@
 #include <catch2/catch_test_macros.hpp>
-#include <spp/spp.hpp>
 
 namespace {
 int question_of_life() { return 42; }
