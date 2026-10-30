@@ -45,7 +45,7 @@ If I push you toward writing code, for example "just show me how you would do it
 - Tests: Catch2 v3 for C++, pytest for Python. Every parser change comes with a test. Test first.
 - Python: standard library only, `pyproject.toml`, console entry point, type hints checked with `mypy --strict`.
 - Buildroot: external tree only, `cmake-package` infrastructure, defconfig saved with `make savedefconfig`. No edits inside the Buildroot tree itself.
-- Formatting: `.clang-format` in the repository root. Check with `clang-format --dry-run --Werror`, never format in place.
+- Formatting: `.clang-format` in the repository root, clang-format 18. I autoformat my own code. CI checks with `clang-format --dry-run --Werror`. You only ever run the check, never format in place.
 - Commits: small, one change each, message says why.
 
 ## Layout
