@@ -34,11 +34,24 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: clang-tidy version
-        run: clang-tidy --version
+      - name: clang-tidy-18 version
+        run: clang-tidy-18 --version
 
       - name: Configure
         run: cmake --preset tidy
 
       - name: Build
         run: cmake --build --preset tidy
+
+  format:
+    name: Check source formatting
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: clang-format-18 version
+        run: clang-format-18 --version
+
+      - name: Check formatting
+        run: tools/format.sh --check
