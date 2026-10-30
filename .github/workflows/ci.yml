@@ -1,19 +1,19 @@
-name: Test project
+name: spp-telemetry CI
 on:
   push:
     branches: [ main ]
   pull_request:
+permissions:
+  contents: read
 jobs:
   test:
-    name: Test (compiler=${{ matrix.compiler }}, preset=${{ matrix.preset }})
+    name: Execute tests (compiler=${{ matrix.compiler }}, preset=${{ matrix.preset }})
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
         compiler: [ g++, clang++ ]
         preset: [ debug, san ]
-    permissions:
-      contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -26,3 +26,19 @@ jobs:
 
       - name: Test
         run: ctest --preset ${{ matrix.preset }}
+
+  lint:
+    name: Lint sources
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: clang-tidy version
+        run: clang-tidy --version
+
+      - name: Configure
+        run: cmake --preset tidy
+
+      - name: Build
+        run: cmake --build --preset tidy
