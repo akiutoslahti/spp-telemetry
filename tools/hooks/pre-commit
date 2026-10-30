@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+#
+# pre-commit — abort the commit if the staged changes to *.cpp / *.hpp files
+# are not clang-formatted. Nothing is modified.
+#
+# Install with the hook at tools/hooks/pre-commit:
+#   git config core.hooksPath tools/hooks
+#
+set -euo pipefail
+
+CLANG_FORMAT="clang-format-18"
+GIT_CLANG_FORMAT="git-clang-format-18"   # ships with the clang-format-18 package
+STYLE="file:.clang-format"               # same style source as tools/format.sh
+
+for tool in "$CLANG_FORMAT" "$GIT_CLANG_FORMAT"; do
+    if ! command -v "$tool" >/dev/null 2>&1; then
+        echo "pre-commit: '$tool' not found in PATH" >&2
+        exit 1
+    fi
+done
+
+check_staged() {
+    GIT_PAGER="cat" "$GIT_CLANG_FORMAT" --staged --diff --quiet \
+        --binary "$CLANG_FORMAT" --style="$STYLE" --extensions cpp,hpp
+}
+
+if check_staged; then
+    exit 0
+fi
+
+cat >&2 <<EOF
+
+pre-commit: staged changes are not clang-formatted (see above).
+  Run tools/format.sh and then stage again.
+EOF
+exit 1

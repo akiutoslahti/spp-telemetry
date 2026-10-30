@@ -9,4 +9,6 @@ br2-external: Buildroot external tree that packages tmd with an init script into
 
 All code is written by hand. An AI assistant is used for review and as a reference, see CLAUDE.md. The design and the schedule are in PLAN.md.
 
+Development setup: after cloning, enable the versioned git hooks once with `git config core.hooksPath tools/hooks`. The pre-commit hook refuses commits whose staged C++ changes are not clang-formatted and needs clang-format-18 and git-clang-format-18 in PATH. Format with `tools/format.sh`, check with `tools/format.sh --check`.
+
 Status: in progress.
