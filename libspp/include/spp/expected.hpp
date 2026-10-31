@@ -36,6 +36,8 @@ public:
     return m_exp.index() == 0;
   }
 
+  constexpr explicit operator bool() const noexcept { return has_value(); }
+
   [[nodiscard]] constexpr const T &value() const & noexcept {
     assert(has_value());
     return *std::get_if<0>(&m_exp);
@@ -44,6 +46,15 @@ public:
   [[nodiscard]] constexpr const E &error() const & noexcept {
     assert(!has_value());
     return *std::get_if<1>(&m_exp);
+  }
+
+  [[nodiscard]] constexpr const T *operator->() const noexcept {
+    assert(has_value());
+    return std::get_if<0>(&m_exp);
+  }
+
+  [[nodiscard]] constexpr const T &operator*() const & noexcept {
+    return value();
   }
 };
 } // namespace spp

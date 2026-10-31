@@ -15,6 +15,10 @@ struct MayThrowOnMove {
 };
 
 enum class FakeError : std::uint8_t { Generic };
+
+struct FakeHdr {
+  std::uint32_t fake_field;
+};
 } // namespace
 
 //
@@ -194,4 +198,66 @@ TEST_CASE(
   static_assert(
       !std::is_nothrow_constructible_v<spp::Expected<int, MayThrowOnMove>,
                                        spp::Unexpected<MayThrowOnMove>>);
+}
+
+TEST_CASE("Expected is true with a value and false with an error",
+          "[Expected]") {
+  const spp::Expected<int, FakeError> exp = 42;
+  REQUIRE(exp);
+  const spp::Expected<int, FakeError> exp2 =
+      spp::Unexpected(FakeError::Generic);
+  REQUIRE_FALSE(exp2);
+}
+
+TEST_CASE(
+    "Expected is true with a value and false with an error (at compile time)",
+    "[Expected]") {
+  constexpr spp::Expected<int, FakeError> exp = 42;
+  STATIC_REQUIRE(exp);
+  constexpr spp::Expected<int, FakeError> exp2 =
+      spp::Unexpected(FakeError::Generic);
+  STATIC_REQUIRE_FALSE(exp2);
+}
+
+TEST_CASE("Expected can't be implicitly converted to bool", "[Expected]") {
+  static_assert(!std::is_convertible_v<spp::Expected<int, FakeError>, bool>);
+}
+
+TEST_CASE("Expected can be dereferenced to its value", "[Expected]") {
+  const spp::Expected<int, FakeError> exp = 42;
+  REQUIRE(*exp == 42);
+}
+
+TEST_CASE("Expected can be dereferenced to its value at compile time",
+          "[Expected]") {
+  constexpr spp::Expected<int, FakeError> exp = 42;
+  STATIC_REQUIRE(*exp == 42);
+}
+
+TEST_CASE("Expected forwards member access to its value", "[Expected]") {
+  const FakeHdr hdr = {.fake_field = 42};
+  const spp::Expected<FakeHdr, FakeError> exp = hdr;
+  REQUIRE(exp->fake_field == 42);
+}
+
+TEST_CASE("Expected forwards member access to its value at compile time",
+          "[Expected]") {
+  constexpr FakeHdr hdr = {.fake_field = 42};
+  constexpr spp::Expected<FakeHdr, FakeError> exp = hdr;
+  STATIC_REQUIRE(exp->fake_field == 42);
+}
+
+TEST_CASE("Expected operator bool can't throw", "[Expected]") {
+  STATIC_REQUIRE(noexcept(
+      std::declval<const spp::Expected<int, FakeError>>().operator bool()));
+}
+
+TEST_CASE("Expected operator* can't throw", "[Expected]") {
+  STATIC_REQUIRE(noexcept(
+      std::declval<const spp::Expected<int, FakeError>>().operator*()));
+}
+
+TEST_CASE("Expected operator-> can't throw", "[Expected]") {
+  STATIC_REQUIRE(noexcept(
+      std::declval<const spp::Expected<int, FakeError>>().operator->()));
 }
