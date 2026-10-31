@@ -152,14 +152,14 @@ TEST_CASE("Expected query has_value can't throw", "[Expected]") {
       std::declval<const spp::Expected<int, FakeError>>().has_value()));
 }
 
-TEST_CASE("Expected accessor value can't throw", "[Expected]") {
+TEST_CASE("Expected accessor value (const&) can't throw", "[Expected]") {
   STATIC_REQUIRE(
-      noexcept(std::declval<const spp::Expected<int, FakeError>>().value()));
+      noexcept(std::declval<const spp::Expected<int, FakeError> &>().value()));
 }
 
-TEST_CASE("Expected accessor error can't throw", "[Expected]") {
+TEST_CASE("Expected accessor error (const&) can't throw", "[Expected]") {
   STATIC_REQUIRE(
-      noexcept(std::declval<const spp::Expected<int, FakeError>>().error()));
+      noexcept(std::declval<const spp::Expected<int, FakeError> &>().error()));
 }
 
 TEST_CASE(
@@ -254,12 +254,81 @@ TEST_CASE("Expected operator bool can't throw", "[Expected]") {
       std::declval<const spp::Expected<int, FakeError>>().operator bool()));
 }
 
-TEST_CASE("Expected operator* can't throw", "[Expected]") {
+TEST_CASE("Expected operator* (const&) can't throw", "[Expected]") {
   STATIC_REQUIRE(noexcept(
-      std::declval<const spp::Expected<int, FakeError>>().operator*()));
+      std::declval<const spp::Expected<int, FakeError> &>().operator*()));
 }
 
 TEST_CASE("Expected operator-> can't throw", "[Expected]") {
   STATIC_REQUIRE(noexcept(
       std::declval<const spp::Expected<int, FakeError>>().operator->()));
+}
+
+TEST_CASE("Expected value can be moved out", "[Expected]") {
+  std::unique_ptr<int> ptr = std::make_unique<int>(42);
+  spp::Expected<std::unique_ptr<int>, FakeError> exp = std::move(ptr);
+  auto ptr2 = std::move(exp).value();
+  REQUIRE(*ptr2 == 42);
+}
+
+TEST_CASE("Expected value moves only from an rvalue", "[Expected]") {
+  STATIC_REQUIRE(
+      std::is_same_v<
+          const int &,
+          decltype(std::declval<spp::Expected<int, FakeError> &>().value())>);
+  STATIC_REQUIRE(
+      std::is_same_v<
+          int &&,
+          decltype(std::declval<spp::Expected<int, FakeError>>().value())>);
+}
+
+TEST_CASE("Expected error can be moved out", "[Expected]") {
+  std::unique_ptr<int> ptr = std::make_unique<int>(42);
+  spp::Expected<int, std::unique_ptr<int>> exp =
+      spp::Unexpected(std::move(ptr));
+  auto ptr2 = std::move(exp).error();
+  REQUIRE(*ptr2 == 42);
+}
+
+TEST_CASE("Expected error moves only from an rvalue", "[Expected]") {
+  STATIC_REQUIRE(std::is_same_v<
+                 const int &,
+                 decltype(std::declval<spp::Expected<int, int> &>().error())>);
+  STATIC_REQUIRE(
+      std::is_same_v<
+          int &&, decltype(std::declval<spp::Expected<int, int>>().error())>);
+}
+
+TEST_CASE("Expected value can be moved out by dereferencing", "[Expected]") {
+  std::unique_ptr<int> ptr = std::make_unique<int>(42);
+  spp::Expected<std::unique_ptr<int>, FakeError> exp = std::move(ptr);
+  auto ptr2 = *std::move(exp);
+  REQUIRE(*ptr2 == 42);
+}
+
+TEST_CASE("Expected value moves by dereferencing only from an rvalue",
+          "[Expected]") {
+  STATIC_REQUIRE(
+      std::is_same_v<const int &,
+                     decltype(std::declval<spp::Expected<int, FakeError> &>()
+                                  .operator*())>);
+  STATIC_REQUIRE(
+      std::is_same_v<
+          int &&,
+          decltype(std::declval<spp::Expected<int, FakeError>>().operator*())>);
+}
+
+TEST_CASE("Expected accessor value (&&) can't throw", "[Expected]") {
+  STATIC_REQUIRE(
+      noexcept(std::declval<spp::Expected<int, FakeError>>().value()));
+}
+
+TEST_CASE("Expected accessor error (&&) can't throw", "[Expected]") {
+  STATIC_REQUIRE(
+      noexcept(std::declval<spp::Expected<int, FakeError>>().error()));
+}
+
+TEST_CASE("Expected operator* (&&) can't throw", "[Expected]") {
+  STATIC_REQUIRE(
+      noexcept(std::declval<spp::Expected<int, FakeError>>().operator*()));
 }

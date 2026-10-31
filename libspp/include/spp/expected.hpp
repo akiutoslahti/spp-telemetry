@@ -20,7 +20,7 @@ public:
   [[nodiscard]] constexpr E &&error() && noexcept { return std::move(m_unexp); }
 };
 
-template <class T, class E> class Expected {
+template <class T, class E> class [[nodiscard]] Expected {
 private:
   std::variant<T, E> m_exp;
 
@@ -43,9 +43,19 @@ public:
     return *std::get_if<0>(&m_exp);
   }
 
+  [[nodiscard]] constexpr T &&value() && noexcept {
+    assert(has_value());
+    return std::move(*std::get_if<0>(&m_exp));
+  }
+
   [[nodiscard]] constexpr const E &error() const & noexcept {
     assert(!has_value());
     return *std::get_if<1>(&m_exp);
+  }
+
+  [[nodiscard]] constexpr E &&error() && noexcept {
+    assert(!has_value());
+    return std::move(*std::get_if<1>(&m_exp));
   }
 
   [[nodiscard]] constexpr const T *operator->() const noexcept {
@@ -55,6 +65,10 @@ public:
 
   [[nodiscard]] constexpr const T &operator*() const & noexcept {
     return value();
+  }
+
+  [[nodiscard]] constexpr T &&operator*() && noexcept {
+    return std::move(*this).value();
   }
 };
 } // namespace spp
