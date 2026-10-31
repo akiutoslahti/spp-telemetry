@@ -25,12 +25,12 @@ struct FakeHdr {
 // Tests for Unexpected
 //
 
-TEST_CASE("Unexpected holds error and returns it", "[Unexpected]") {
+TEST_CASE("Unexpected has error", "[Unexpected]") {
   const spp::Unexpected<int> unexp = spp::Unexpected(42);
   REQUIRE(unexp.error() == 42);
 }
 
-TEST_CASE("Unexpected works at compile time", "[Unexpected]") {
+TEST_CASE("Unexpected has error at compile time", "[Unexpected]") {
   constexpr spp::Unexpected<int> unexp = spp::Unexpected(42);
   STATIC_REQUIRE(unexp.error() == 42);
 }
@@ -65,7 +65,7 @@ TEST_CASE("Unexpected constructor is noexcept exactly when E's move is",
                                        MayThrowOnMove>);
 }
 
-TEST_CASE("Unexpected constructor moves its error argument", "[Unexpected]") {
+TEST_CASE("Unexpected constructor moves its argument", "[Unexpected]") {
   std::unique_ptr<int> ptr = std::make_unique<int>(42);
   auto unexp = spp::Unexpected(std::move(ptr));
   REQUIRE(unexp.error() != nullptr);
@@ -139,7 +139,8 @@ TEST_CASE("Expected has no default constructor", "[Expected]") {
       !std::is_default_constructible_v<spp::Expected<int, FakeError>>);
 }
 
-TEST_CASE("Expected constructor moves its value argument", "[Expected]") {
+TEST_CASE("Expected constructor moves its argument (from value)",
+          "[Expected]") {
   std::unique_ptr<int> ptr = std::make_unique<int>(42);
   const spp::Expected<std::unique_ptr<int>, FakeError> exp = std::move(ptr);
   REQUIRE(ptr == nullptr);
@@ -147,19 +148,38 @@ TEST_CASE("Expected constructor moves its value argument", "[Expected]") {
   REQUIRE(*exp.value() == 42);
 }
 
-TEST_CASE("Expected query has_value can't throw", "[Expected]") {
+TEST_CASE("Expected constructor moves its argument (from error)",
+          "[Expected]") {
+  std::unique_ptr<int> ptr = std::make_unique<int>(42);
+  auto unexp = spp::Unexpected(std::move(ptr));
+  const spp::Expected<int, std::unique_ptr<int>> exp = std::move(unexp);
+  REQUIRE_FALSE(exp.has_value());
+  REQUIRE(*exp.error() == 42);
+}
+
+TEST_CASE("Expected has_value query can't throw", "[Expected]") {
   STATIC_REQUIRE(noexcept(
       std::declval<const spp::Expected<int, FakeError>>().has_value()));
 }
 
-TEST_CASE("Expected accessor value (const&) can't throw", "[Expected]") {
+TEST_CASE("Expected value accessor (const&) can't throw", "[Expected]") {
   STATIC_REQUIRE(
       noexcept(std::declval<const spp::Expected<int, FakeError> &>().value()));
 }
 
-TEST_CASE("Expected accessor error (const&) can't throw", "[Expected]") {
+TEST_CASE("Expected value accessor (&&) can't throw", "[Expected]") {
+  STATIC_REQUIRE(
+      noexcept(std::declval<spp::Expected<int, FakeError>>().value()));
+}
+
+TEST_CASE("Expected error accessor (const&) can't throw", "[Expected]") {
   STATIC_REQUIRE(
       noexcept(std::declval<const spp::Expected<int, FakeError> &>().error()));
+}
+
+TEST_CASE("Expected error accessor (&&) can't throw", "[Expected]") {
+  STATIC_REQUIRE(
+      noexcept(std::declval<spp::Expected<int, FakeError>>().error()));
 }
 
 TEST_CASE(
@@ -172,6 +192,16 @@ TEST_CASE(
                                        MayThrowOnMove>);
 }
 
+TEST_CASE(
+    "Expected constructor from error is noexcept exactly when E's move is",
+    "[Expected]") {
+  STATIC_REQUIRE(std::is_nothrow_constructible_v<spp::Expected<int, int>,
+                                                 spp::Unexpected<int>>);
+  STATIC_REQUIRE(
+      !std::is_nothrow_constructible_v<spp::Expected<int, MayThrowOnMove>,
+                                       spp::Unexpected<MayThrowOnMove>>);
+}
+
 TEST_CASE("Expected can be constructed implicitly from value and error when "
           "they share type",
           "[Expected]") {
@@ -181,24 +211,6 @@ TEST_CASE("Expected can be constructed implicitly from value and error when "
   const spp::Expected<int, int> exp2 = spp::Unexpected(42);
   REQUIRE_FALSE(exp2.has_value());
   REQUIRE(exp2.error() == 42);
-}
-
-TEST_CASE("Expected constructor moves its error argument", "[Expected]") {
-  std::unique_ptr<int> ptr = std::make_unique<int>(42);
-  auto unexp = spp::Unexpected(std::move(ptr));
-  const spp::Expected<int, std::unique_ptr<int>> exp = std::move(unexp);
-  REQUIRE_FALSE(exp.has_value());
-  REQUIRE(*exp.error() == 42);
-}
-
-TEST_CASE(
-    "Expected constructor from error is noexcept exactly when E's move is",
-    "[Expected]") {
-  STATIC_REQUIRE(std::is_nothrow_constructible_v<spp::Expected<int, int>,
-                                                 spp::Unexpected<int>>);
-  STATIC_REQUIRE(
-      !std::is_nothrow_constructible_v<spp::Expected<int, MayThrowOnMove>,
-                                       spp::Unexpected<MayThrowOnMove>>);
 }
 
 TEST_CASE("Expected is true with a value and false with an error",
@@ -259,6 +271,11 @@ TEST_CASE("Expected operator* (const&) can't throw", "[Expected]") {
       std::declval<const spp::Expected<int, FakeError> &>().operator*()));
 }
 
+TEST_CASE("Expected operator* (&&) can't throw", "[Expected]") {
+  STATIC_REQUIRE(
+      noexcept(std::declval<spp::Expected<int, FakeError>>().operator*()));
+}
+
 TEST_CASE("Expected operator-> can't throw", "[Expected]") {
   STATIC_REQUIRE(noexcept(
       std::declval<const spp::Expected<int, FakeError>>().operator->()));
@@ -316,19 +333,4 @@ TEST_CASE("Expected value moves by dereferencing only from an rvalue",
       std::is_same_v<
           int &&,
           decltype(std::declval<spp::Expected<int, FakeError>>().operator*())>);
-}
-
-TEST_CASE("Expected accessor value (&&) can't throw", "[Expected]") {
-  STATIC_REQUIRE(
-      noexcept(std::declval<spp::Expected<int, FakeError>>().value()));
-}
-
-TEST_CASE("Expected accessor error (&&) can't throw", "[Expected]") {
-  STATIC_REQUIRE(
-      noexcept(std::declval<spp::Expected<int, FakeError>>().error()));
-}
-
-TEST_CASE("Expected operator* (&&) can't throw", "[Expected]") {
-  STATIC_REQUIRE(
-      noexcept(std::declval<spp::Expected<int, FakeError>>().operator*()));
 }
