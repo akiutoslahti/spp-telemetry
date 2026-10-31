@@ -32,34 +32,35 @@ TEST_CASE("Unexpected holds error and returns it", "[Unexpected]") {
 
 TEST_CASE("Unexpected works at compile time", "[Unexpected]") {
   constexpr spp::Unexpected<int> unexp = spp::Unexpected(42);
-  static_assert(unexp.error() == 42);
+  STATIC_REQUIRE(unexp.error() == 42);
 }
 
 TEST_CASE("Unexpected can deduce its type", "[Unexpected]") {
   auto unexp = spp::Unexpected(42);
-  static_assert(std::is_same_v<decltype(unexp), spp::Unexpected<int>>);
+  STATIC_REQUIRE(std::is_same_v<decltype(unexp), spp::Unexpected<int>>);
 }
 
 TEST_CASE("Unexpected can't be created implicitly", "[Unexpected]") {
-  static_assert(!std::is_convertible_v<int, spp::Unexpected<int>>);
+  STATIC_REQUIRE_FALSE(std::is_convertible_v<int, spp::Unexpected<int>>);
 }
 
 TEST_CASE("Unexpected has no default constructor", "[Unexpected]") {
-  static_assert(!std::is_default_constructible_v<spp::Unexpected<int>>);
+  STATIC_REQUIRE_FALSE(std::is_default_constructible_v<spp::Unexpected<int>>);
 }
 
 TEST_CASE("Unexpected error accessor (const&) can't throw", "[Unexpected]") {
-  static_assert(noexcept(std::declval<const spp::Unexpected<int> &>().error()));
+  STATIC_REQUIRE(
+      noexcept(std::declval<const spp::Unexpected<int> &>().error()));
 }
 
 TEST_CASE("Unexpected error accessor (&&) can't throw", "[Unexpected]") {
-  static_assert(noexcept(std::declval<spp::Unexpected<int>>().error()));
+  STATIC_REQUIRE(noexcept(std::declval<spp::Unexpected<int>>().error()));
 }
 
 TEST_CASE("Unexpected constructor is noexcept exactly when E's move is",
           "[Unexpected]") {
-  static_assert(std::is_nothrow_constructible_v<spp::Unexpected<int>, int>);
-  static_assert(
+  STATIC_REQUIRE(std::is_nothrow_constructible_v<spp::Unexpected<int>, int>);
+  STATIC_REQUIRE(
       !std::is_nothrow_constructible_v<spp::Unexpected<MayThrowOnMove>,
                                        MayThrowOnMove>);
 }
@@ -80,10 +81,10 @@ TEST_CASE("Unexpected error can be moved out", "[Unexpected]") {
 }
 
 TEST_CASE("Unexpected error moves only from an rvalue", "[Unexpected]") {
-  static_assert(
+  STATIC_REQUIRE(
       std::is_same_v<const int &,
                      decltype(std::declval<spp::Unexpected<int> &>().error())>);
-  static_assert(
+  STATIC_REQUIRE(
       std::is_same_v<int &&,
                      decltype(std::declval<spp::Unexpected<int>>().error())>);
 }
@@ -100,41 +101,41 @@ TEST_CASE("Expected has value", "[Expected]") {
 
 TEST_CASE("Expected has value at compile time", "[Expected]") {
   constexpr spp::Expected<int, FakeError> exp = 42;
-  static_assert(exp.has_value());
-  static_assert(exp.value() == 42);
+  STATIC_REQUIRE(exp.has_value());
+  STATIC_REQUIRE(exp.value() == 42);
 }
 
 TEST_CASE("Expected has error", "[Expected]") {
   const spp::Expected<int, FakeError> exp = spp::Unexpected(FakeError::Generic);
-  REQUIRE(!exp.has_value());
+  REQUIRE_FALSE(exp.has_value());
   REQUIRE(exp.error() == FakeError::Generic);
 }
 
 TEST_CASE("Expected has error at compile time", "[Expected]") {
   constexpr spp::Expected<int, FakeError> exp =
       spp::Unexpected(FakeError::Generic);
-  static_assert(!exp.has_value());
-  static_assert(exp.error() == FakeError::Generic);
+  STATIC_REQUIRE_FALSE(exp.has_value());
+  STATIC_REQUIRE(exp.error() == FakeError::Generic);
 }
 
 TEST_CASE("Expected can be created implicitly from value", "[Expected]") {
-  static_assert(std::is_convertible_v<int, spp::Expected<int, FakeError>>);
+  STATIC_REQUIRE(std::is_convertible_v<int, spp::Expected<int, FakeError>>);
 }
 
 TEST_CASE("Expected can be created implicitly from error", "[Expected]") {
-  static_assert(std::is_convertible_v<spp::Unexpected<FakeError>,
-                                      spp::Expected<int, FakeError>>);
+  STATIC_REQUIRE(std::is_convertible_v<spp::Unexpected<FakeError>,
+                                       spp::Expected<int, FakeError>>);
 }
 
 TEST_CASE("Expected can't be created implicitly from error withouth Unexpected "
           "wrapper",
           "[Expected]") {
-  static_assert(
+  STATIC_REQUIRE(
       !std::is_convertible_v<FakeError, spp::Expected<int, FakeError>>);
 }
 
 TEST_CASE("Expected has no default constructor", "[Expected]") {
-  static_assert(
+  STATIC_REQUIRE(
       !std::is_default_constructible_v<spp::Expected<int, FakeError>>);
 }
 
@@ -147,26 +148,26 @@ TEST_CASE("Expected constructor moves its value argument", "[Expected]") {
 }
 
 TEST_CASE("Expected query has_value can't throw", "[Expected]") {
-  static_assert(noexcept(
+  STATIC_REQUIRE(noexcept(
       std::declval<const spp::Expected<int, FakeError>>().has_value()));
 }
 
 TEST_CASE("Expected accessor value can't throw", "[Expected]") {
-  static_assert(
+  STATIC_REQUIRE(
       noexcept(std::declval<const spp::Expected<int, FakeError>>().value()));
 }
 
 TEST_CASE("Expected accessor error can't throw", "[Expected]") {
-  static_assert(
+  STATIC_REQUIRE(
       noexcept(std::declval<const spp::Expected<int, FakeError>>().error()));
 }
 
 TEST_CASE(
     "Expected constructor from value is noexcept exactly when T's move is",
     "[Expected]") {
-  static_assert(
+  STATIC_REQUIRE(
       std::is_nothrow_constructible_v<spp::Expected<int, FakeError>, int>);
-  static_assert(
+  STATIC_REQUIRE(
       !std::is_nothrow_constructible_v<spp::Expected<MayThrowOnMove, FakeError>,
                                        MayThrowOnMove>);
 }
@@ -178,7 +179,7 @@ TEST_CASE("Expected can be constructed implicitly from value and error when "
   REQUIRE(exp.has_value());
   REQUIRE(exp.value() == 42);
   const spp::Expected<int, int> exp2 = spp::Unexpected(42);
-  REQUIRE(!exp2.has_value());
+  REQUIRE_FALSE(exp2.has_value());
   REQUIRE(exp2.error() == 42);
 }
 
@@ -186,16 +187,16 @@ TEST_CASE("Expected constructor moves its error argument", "[Expected]") {
   std::unique_ptr<int> ptr = std::make_unique<int>(42);
   auto unexp = spp::Unexpected(std::move(ptr));
   const spp::Expected<int, std::unique_ptr<int>> exp = std::move(unexp);
-  REQUIRE(!exp.has_value());
+  REQUIRE_FALSE(exp.has_value());
   REQUIRE(*exp.error() == 42);
 }
 
 TEST_CASE(
     "Expected constructor from error is noexcept exactly when E's move is",
     "[Expected]") {
-  static_assert(std::is_nothrow_constructible_v<spp::Expected<int, int>,
-                                                spp::Unexpected<int>>);
-  static_assert(
+  STATIC_REQUIRE(std::is_nothrow_constructible_v<spp::Expected<int, int>,
+                                                 spp::Unexpected<int>>);
+  STATIC_REQUIRE(
       !std::is_nothrow_constructible_v<spp::Expected<int, MayThrowOnMove>,
                                        spp::Unexpected<MayThrowOnMove>>);
 }
@@ -220,7 +221,8 @@ TEST_CASE(
 }
 
 TEST_CASE("Expected can't be implicitly converted to bool", "[Expected]") {
-  static_assert(!std::is_convertible_v<spp::Expected<int, FakeError>, bool>);
+  STATIC_REQUIRE_FALSE(
+      std::is_convertible_v<spp::Expected<int, FakeError>, bool>);
 }
 
 TEST_CASE("Expected can be dereferenced to its value", "[Expected]") {
