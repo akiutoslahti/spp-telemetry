@@ -3,7 +3,9 @@
 #include <spp/error.hpp>
 #include <spp/expected.hpp>
 
+#include <cstddef>
 #include <cstdint>
+#include <span>
 
 namespace spp {
 constexpr std::uint16_t ApidMax = 0x7FFU;
@@ -88,4 +90,10 @@ struct PacketPrimaryHeader {
   // Data Field (in octets). Ref. CCSDS 133.0-B-2 section 4.1.3.5.2
   std::uint16_t data_length;
 };
+
+[[nodiscard]] Expected<std::size_t, Error>
+serialize_header(PacketPrimaryHeader header, std::span<std::byte> dst) noexcept;
+
+[[nodiscard]] Expected<PacketPrimaryHeader, Error>
+parse_header(std::span<const std::byte> src) noexcept;
 } // namespace spp
