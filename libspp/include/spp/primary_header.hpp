@@ -8,6 +8,7 @@
 namespace spp {
 constexpr std::uint16_t ApidMax = 0x7FFU;
 constexpr std::uint16_t ApidIdlePacket = ApidMax;
+constexpr std::uint16_t SequenceCountMax = 0x3FFFU;
 
 enum class PacketType : std::uint8_t { Telemetry = 0, Telecommand = 1 };
 
@@ -38,18 +39,53 @@ enum class SequenceFlags : std::uint8_t {
   Unsegmented = 3
 };
 
-struct PacketPrimaryHeader {
-  // Packet Version Number (3b)
+class SequenceCount {
+private:
+  std::uint16_t m_seq_count;
 
+  constexpr explicit SequenceCount(std::uint16_t seq_count) noexcept
+      : m_seq_count(seq_count) {}
+
+public:
+  [[nodiscard]] static constexpr Expected<SequenceCount, Error>
+  create(std::uint16_t seq_count) noexcept {
+    if (seq_count > SequenceCountMax) {
+      return Unexpected(Error::InvalidSequenceCount);
+    }
+    return SequenceCount(seq_count);
+  }
+
+  [[nodiscard]] constexpr std::uint16_t get() const noexcept {
+    return m_seq_count;
+  }
+};
+
+struct PacketPrimaryHeader {
+  // Packet Version Number (3b) omitted as CCSDS 133.0-B-2 defines only one
+  // valid version (000b).
+
+  //
   // Packet Identification
+  //
+
+  // Packet Type (1b)
   PacketType type;
+  // Secondary Header Flag (1b)
   SecondaryHeaderFlag secondary_header_flag;
+  // Application Process Identifier (APID) (11b)
   Apid apid;
 
-  // Packet Sequence Control:
-  SequenceFlags sequence_flags;
-  // Packet Sequence Count (14b)
+  //
+  // Packet Sequence Control
+  //
 
-  // Packet Data Length (16b)
+  // Sequence Flags (2b)
+  SequenceFlags sequence_flags;
+  // Packet Sequence Count or Packet Name (14b)
+  SequenceCount sequence_count;
+
+  // Packet Data Length (16b) equals one fewer than the length of the Packet
+  // Data Field (in octets). Ref. CCSDS 133.0-B-2 section 4.1.3.5.2
+  std::uint16_t data_length;
 };
 } // namespace spp
