@@ -36,6 +36,8 @@ public:
   }
 
   [[nodiscard]] constexpr std::uint16_t get() const noexcept { return m_apid; }
+
+  [[nodiscard]] bool operator==(const Apid &) const noexcept = default;
 };
 
 enum class SequenceFlags : std::uint8_t {
@@ -64,6 +66,8 @@ public:
   [[nodiscard]] constexpr std::uint16_t get() const noexcept {
     return m_seq_count;
   }
+
+  [[nodiscard]] bool operator==(const SequenceCount &) const noexcept = default;
 };
 
 struct PacketPrimaryHeader {
@@ -93,6 +97,10 @@ struct PacketPrimaryHeader {
   // Packet Data Length (16b) equals one fewer than the length of the Packet
   // Data Field (in octets). Ref. CCSDS 133.0-B-2 section 4.1.3.5.2
   std::uint16_t data_length;
+
+  [[nodiscard]] friend bool
+  operator==(const PacketPrimaryHeader &,
+             const PacketPrimaryHeader &) noexcept = default;
 };
 
 [[nodiscard]] Expected<std::size_t, Error>

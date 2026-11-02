@@ -9,7 +9,11 @@ enum class Error : std::uint8_t {
   InvalidApid,
   InvalidSequenceCount,
   PrimaryHeaderTooShort,
-  UnsupportedPacketVersionNumber
+  UnsupportedPacketVersionNumber,
+  DestinationBufferTooShort,
+  InvalidPacketType,
+  InvalidSecondaryHeaderFlag,
+  InvalidSequenceFlags
 };
 
 [[nodiscard]] constexpr std::string_view to_string(Error error) noexcept {
@@ -24,6 +28,14 @@ enum class Error : std::uint8_t {
     return "Packet Primary Header is too short";
   case Error::UnsupportedPacketVersionNumber:
     return "Packet Version Number is unsupported";
+  case Error::DestinationBufferTooShort:
+    return "Destination buffer is too short";
+  case Error::InvalidPacketType:
+    return "Invalid Packet Type";
+  case Error::InvalidSecondaryHeaderFlag:
+    return "Invalid Secondary Header Flag";
+  case Error::InvalidSequenceFlags:
+    return "Invalid Sequence Flags";
   }
 
   return "Unknown error";

@@ -15,6 +15,47 @@ read_be16(std::span<const std::byte, 2> src) noexcept {
       (std::to_integer<std::uint16_t>(src[0]) << BitsPerOctet) |
       std::to_integer<std::uint16_t>(src[1]));
 }
+
+constexpr void write_be16(std::uint16_t val,
+                          std::span<std::byte, 2> dst) noexcept {
+  dst[0] = std::byte{static_cast<std::uint8_t>(val >> BitsPerOctet)};
+  dst[1] = std::byte{static_cast<std::uint8_t>(val)};
+}
+
+[[nodiscard]] constexpr bool
+packet_type_is_valid(spp::PacketType type) noexcept {
+  switch (type) {
+  case spp::PacketType::Telemetry:
+  case spp::PacketType::Telecommand:
+    return true;
+  }
+
+  return false;
+}
+
+[[nodiscard]] constexpr bool
+secondary_header_flag_is_valid(spp::SecondaryHeaderFlag flag) noexcept {
+  switch (flag) {
+  case spp::SecondaryHeaderFlag::NotPresent:
+  case spp::SecondaryHeaderFlag::Present:
+    return true;
+  }
+
+  return false;
+}
+
+[[nodiscard]] constexpr bool
+sequence_flags_is_valid(spp::SequenceFlags flags) noexcept {
+  switch (flags) {
+  case spp::SequenceFlags::ContinuationSegment:
+  case spp::SequenceFlags::FirstSegment:
+  case spp::SequenceFlags::LastSegment:
+  case spp::SequenceFlags::Unsegmented:
+    return true;
+  }
+
+  return false;
+}
 } // namespace
 
 namespace spp {
@@ -30,10 +71,39 @@ constexpr std::uint16_t SequenceCountMask = 0x3FFFU;
 Expected<std::size_t, Error>
 serialize_header(PacketPrimaryHeader header,
                  std::span<std::byte> dst) noexcept {
-  (void)header;
-  (void)dst;
+  if (dst.size() < PrimaryHeaderSize) {
+    return Unexpected(Error::DestinationBufferTooShort);
+  }
 
-  return Unexpected(Error::Internal);
+  if (!packet_type_is_valid(header.type)) {
+    return Unexpected(Error::InvalidPacketType);
+  }
+
+  if (!secondary_header_flag_is_valid(header.secondary_header_flag)) {
+    return Unexpected(Error::InvalidSecondaryHeaderFlag);
+  }
+
+  if (!sequence_flags_is_valid(header.sequence_flags)) {
+    return Unexpected(Error::InvalidSequenceFlags);
+  }
+
+  const auto packet_identification = static_cast<std::uint16_t>(
+      (SupportedPacketVersionNumber << PacketVersionNumberShift) |
+      (static_cast<std::uint8_t>(header.type) << PacketTypeShift) |
+      (static_cast<std::uint8_t>(header.secondary_header_flag)
+       << SecondaryHeaderFlagShift) |
+      header.apid.get());
+
+  const auto packet_sequence_control = static_cast<std::uint16_t>(
+      (static_cast<std::uint8_t>(header.sequence_flags) << SequenceFlagsShift) |
+      header.sequence_count.get());
+
+  auto dst_header = dst.first<PrimaryHeaderSize>();
+  write_be16(packet_identification, dst_header.subspan<0, 2>());
+  write_be16(packet_sequence_control, dst_header.subspan<2, 2>());
+  write_be16(header.data_length, dst_header.subspan<4, 2>());
+
+  return PrimaryHeaderSize;
 }
 
 Expected<PacketPrimaryHeader, Error>

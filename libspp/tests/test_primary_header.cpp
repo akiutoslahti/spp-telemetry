@@ -1,17 +1,20 @@
 #include <spp/error.hpp>
+#include <spp/expected.hpp>
 #include <spp/primary_header.hpp>
 
 #include <array>
 #include <cstddef>
 #include <cstdint>
-#include <limits>
 #include <span>
 #include <string>
+#include <type_traits>
 #include <utility>
 
 #include <catch2/catch_message.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/catch_tostring.hpp>
+#include <catch2/matchers/catch_matchers.hpp>
+#include <catch2/matchers/catch_matchers_range_equals.hpp>
 
 namespace Catch {
 template <> struct StringMaker<spp::Error> {
@@ -20,6 +23,56 @@ template <> struct StringMaker<spp::Error> {
   }
 };
 } // namespace Catch
+
+namespace {
+constexpr spp::Expected<spp::Apid, spp::Error> GoldenVectorApid =
+    spp::Apid::create(0x555);
+constexpr spp::Expected<spp::SequenceCount, spp::Error>
+    GoldenVectorSequenceCount = spp::SequenceCount::create(0x1555);
+constexpr spp::PacketPrimaryHeader GoldenVectorHeader = {
+    .type = spp::PacketType::Telecommand,
+    .secondary_header_flag = spp::SecondaryHeaderFlag::NotPresent,
+    .apid = *GoldenVectorApid,
+    .sequence_flags = spp::SequenceFlags::FirstSegment,
+    .sequence_count = *GoldenVectorSequenceCount,
+    .data_length = 0x5555};
+constexpr std::array<std::byte, spp::PrimaryHeaderSize> GoldenVector = {
+    std::byte{0x15}, std::byte{0x55}, std::byte{0x55},
+    std::byte{0x55}, std::byte{0x55}, std::byte{0x55}};
+
+constexpr spp::Expected<spp::Apid, spp::Error> MinVectorApid =
+    spp::Apid::create(0);
+constexpr spp::Expected<spp::SequenceCount, spp::Error> MinVectorSequenceCount =
+    spp::SequenceCount::create(0);
+constexpr spp::PacketPrimaryHeader MinVectorHeader = {
+    .type = spp::PacketType::Telemetry,
+    .secondary_header_flag = spp::SecondaryHeaderFlag::NotPresent,
+    .apid = *MinVectorApid,
+    .sequence_flags = spp::SequenceFlags::ContinuationSegment,
+    .sequence_count = *MinVectorSequenceCount,
+    .data_length = 0x0000};
+constexpr std::array<std::byte, spp::PrimaryHeaderSize> MinVector = {};
+
+constexpr spp::Expected<spp::Apid, spp::Error> MaxVectorApid =
+    spp::Apid::create(spp::ApidMax);
+constexpr spp::Expected<spp::SequenceCount, spp::Error> MaxVectorSequenceCount =
+    spp::SequenceCount::create(spp::SequenceCountMax);
+constexpr spp::PacketPrimaryHeader MaxVectorHeader = {
+    .type = spp::PacketType::Telecommand,
+    .secondary_header_flag = spp::SecondaryHeaderFlag::Present,
+    .apid = *MaxVectorApid,
+    .sequence_flags = spp::SequenceFlags::Unsegmented,
+    .sequence_count = *MaxVectorSequenceCount,
+    .data_length = 0xFFFF};
+constexpr std::array<std::byte, spp::PrimaryHeaderSize> MaxVector = {
+    std::byte{0x1F}, std::byte{0xFF}, std::byte{0xFF},
+    std::byte{0xFF}, std::byte{0xFF}, std::byte{0xFF}};
+
+constexpr std::byte SentinelByte = std::byte{0xAA};
+constexpr std::array<std::byte, spp::PrimaryHeaderSize> SentinelVector = {
+    SentinelByte, SentinelByte, SentinelByte,
+    SentinelByte, SentinelByte, SentinelByte};
+} // namespace
 
 //
 // Apid
@@ -40,7 +93,7 @@ TEST_CASE("Apid create rejects values above ApidMax", "[Apid]") {
   REQUIRE_FALSE(apid_too_large.has_value());
   REQUIRE(apid_too_large.error() == spp::Error::InvalidApid);
 
-  apid_too_large = spp::Apid::create(std::numeric_limits<std::uint16_t>::max());
+  apid_too_large = spp::Apid::create(spp::ApidMax + 1);
   REQUIRE_FALSE(apid_too_large.has_value());
   REQUIRE(apid_too_large.error() == spp::Error::InvalidApid);
 }
@@ -63,8 +116,16 @@ TEST_CASE("Apid get accessor can't throw", "[Apid]") {
   STATIC_REQUIRE(noexcept(std::declval<spp::Apid>().get()));
 }
 
+TEST_CASE("Apid operator== works", "[Apid]") {
+  constexpr auto apid_min = spp::Apid::create(0);
+  constexpr auto apid_max = spp::Apid::create(spp::ApidMax);
+
+  STATIC_REQUIRE(*apid_min == *apid_min);
+  STATIC_REQUIRE_FALSE(*apid_min == *apid_max);
+}
+
 //
-// Sequence Count
+// Packet Sequence Count
 //
 
 TEST_CASE("SequenceCount create accepts 0 and SequenceCountMax",
@@ -85,8 +146,7 @@ TEST_CASE("SequenceCount create rejects values above SequenceCountMax",
   REQUIRE_FALSE(seq_count_too_large.has_value());
   REQUIRE(seq_count_too_large.error() == spp::Error::InvalidSequenceCount);
 
-  seq_count_too_large =
-      spp::SequenceCount::create(std::numeric_limits<std::uint16_t>::max());
+  seq_count_too_large = spp::SequenceCount::create(spp::SequenceCountMax + 1);
   REQUIRE_FALSE(seq_count_too_large.has_value());
   REQUIRE(seq_count_too_large.error() == spp::Error::InvalidSequenceCount);
 }
@@ -111,9 +171,216 @@ TEST_CASE("SequenceCount get accessor can't throw", "[SequenceCount]") {
   STATIC_REQUIRE(noexcept(std::declval<spp::SequenceCount>().get()));
 }
 
+TEST_CASE("SequenceCount operator== works", "[SequenceCount]") {
+  constexpr auto seq_count_min = spp::SequenceCount::create(0);
+  constexpr auto seq_count_max =
+      spp::SequenceCount::create(spp::SequenceCountMax);
+
+  STATIC_REQUIRE(*seq_count_min == *seq_count_min);
+  STATIC_REQUIRE_FALSE(*seq_count_min == *seq_count_max);
+}
+
+//
+// Packet Primary Header
+//
+TEST_CASE("PacketPrimaryHeader operator== works", "[PacketPrimaryHeader]") {
+  STATIC_REQUIRE(MinVectorHeader == MinVectorHeader);
+  STATIC_REQUIRE_FALSE(MinVectorHeader == MaxVectorHeader);
+}
+
+TEST_CASE("PacketPrimaryHeader operator== detects mismatch in Packet Type",
+          "[PacketPrimaryHeader]") {
+  constexpr spp::PacketPrimaryHeader header = [] {
+    spp::PacketPrimaryHeader ret = MinVectorHeader;
+    ret.type = spp::PacketType::Telecommand;
+    return ret;
+  }();
+
+  STATIC_REQUIRE_FALSE(MinVectorHeader == header);
+}
+
+TEST_CASE(
+    "PacketPrimaryHeader operator== detects mismatch in Secondary Header Flag",
+    "[PacketPrimaryHeader]") {
+  constexpr spp::PacketPrimaryHeader header = [] {
+    spp::PacketPrimaryHeader ret = MinVectorHeader;
+    ret.secondary_header_flag = spp::SecondaryHeaderFlag::Present;
+    return ret;
+  }();
+
+  STATIC_REQUIRE_FALSE(MinVectorHeader == header);
+}
+
+TEST_CASE("PacketPrimaryHeader operator== detects mismatch in APID",
+          "[PacketPrimaryHeader]") {
+  constexpr spp::PacketPrimaryHeader header = [] {
+    spp::PacketPrimaryHeader ret = MinVectorHeader;
+    ret.apid = *MaxVectorApid;
+    return ret;
+  }();
+
+  STATIC_REQUIRE_FALSE(MinVectorHeader == header);
+}
+
+TEST_CASE("PacketPrimaryHeader operator== detects mismatch in Sequence Flags",
+          "[PacketPrimaryHeader]") {
+  constexpr spp::PacketPrimaryHeader header = [] {
+    spp::PacketPrimaryHeader ret = MinVectorHeader;
+    ret.sequence_flags = spp::SequenceFlags::FirstSegment;
+    return ret;
+  }();
+
+  STATIC_REQUIRE_FALSE(MinVectorHeader == header);
+}
+
+TEST_CASE(
+    "PacketPrimaryHeader operator== detects mismatch in Packet Sequence Count",
+    "[PacketPrimaryHeader]") {
+  constexpr spp::PacketPrimaryHeader header = [] {
+    spp::PacketPrimaryHeader ret = MinVectorHeader;
+    ret.sequence_count = *MaxVectorSequenceCount;
+    return ret;
+  }();
+
+  STATIC_REQUIRE_FALSE(MinVectorHeader == header);
+}
+
+TEST_CASE(
+    "PacketPrimaryHeader operator== detects mismatch in Packet Data Length",
+    "[PacketPrimaryHeader]") {
+  constexpr spp::PacketPrimaryHeader header = [] {
+    spp::PacketPrimaryHeader ret = MinVectorHeader;
+    ret.data_length = 0xFFFF;
+    return ret;
+  }();
+
+  STATIC_REQUIRE_FALSE(MinVectorHeader == header);
+}
+
 //
 // Serialize header
 //
+
+TEST_CASE("serialize_header rejects empty destination buffer with "
+          "DestinationBufferTooShort",
+          "[SerializeHeader]") {
+  std::array<std::byte, 0> dst = {};
+
+  auto res = spp::serialize_header(MinVectorHeader, dst);
+  REQUIRE(!res.has_value());
+  REQUIRE(res.error() == spp::Error::DestinationBufferTooShort);
+}
+
+TEST_CASE("serialize_header rejects too short destination buffer with "
+          "DestinationBufferTooShort",
+          "[SerializeHeader]") {
+  std::array<std::byte, spp::PrimaryHeaderSize - 1> dst = {};
+
+  auto res = spp::serialize_header(MinVectorHeader, dst);
+  REQUIRE(!res.has_value());
+  REQUIRE(res.error() == spp::Error::DestinationBufferTooShort);
+}
+
+TEST_CASE("serialize_header serializes golden vector correctly",
+          "[SerializeHeader]") {
+  std::array<std::byte, spp::PrimaryHeaderSize> dst = SentinelVector;
+
+  auto res = spp::serialize_header(GoldenVectorHeader, dst);
+  REQUIRE(res.has_value());
+  REQUIRE(*res == spp::PrimaryHeaderSize);
+  REQUIRE_THAT(dst, Catch::Matchers::RangeEquals(GoldenVector));
+}
+
+TEST_CASE("serialize_header serializes minimum value header correctly",
+          "[SerializeHeader]") {
+  std::array<std::byte, spp::PrimaryHeaderSize> dst = SentinelVector;
+
+  auto res = spp::serialize_header(MinVectorHeader, dst);
+  REQUIRE(res.has_value());
+  REQUIRE(*res == spp::PrimaryHeaderSize);
+  REQUIRE_THAT(dst, Catch::Matchers::RangeEquals(MinVector));
+}
+
+TEST_CASE("serialize_header serializes maximum value header correctly",
+          "[SerializeHeader]") {
+  std::array<std::byte, spp::PrimaryHeaderSize> dst = SentinelVector;
+
+  auto res = spp::serialize_header(MaxVectorHeader, dst);
+  REQUIRE(res.has_value());
+  REQUIRE(*res == spp::PrimaryHeaderSize);
+  REQUIRE_THAT(dst, Catch::Matchers::RangeEquals(MaxVector));
+}
+
+TEST_CASE(
+    "serialize_header accepts destination buffer longer than PrimaryHeaderSize",
+    "[SerializeHeader]") {
+  std::array<std::byte, spp::PrimaryHeaderSize + 1> dst = {
+      SentinelByte, SentinelByte, SentinelByte, SentinelByte,
+      SentinelByte, SentinelByte, SentinelByte};
+
+  auto res = spp::serialize_header(GoldenVectorHeader, dst);
+  REQUIRE(res.has_value());
+  REQUIRE(*res == spp::PrimaryHeaderSize);
+  REQUIRE_THAT(std::span{dst}.first<spp::PrimaryHeaderSize>(),
+               Catch::Matchers::RangeEquals(GoldenVector));
+  REQUIRE(dst.back() == SentinelByte);
+}
+
+TEST_CASE("serialize_header rejects unknown Packet Type with InvalidPacketType",
+          "[SerializeHeader]") {
+  std::array<std::byte, spp::PrimaryHeaderSize> dst = SentinelVector;
+
+  spp::PacketPrimaryHeader header = GoldenVectorHeader;
+  // NOLINTBEGIN(clang-analyzer-optin.core.EnumCastOutOfRange)
+  header.type = static_cast<spp::PacketType>(
+      static_cast<std::underlying_type_t<spp::PacketType>>(
+          spp::PacketType::Telecommand) +
+      1);
+  // NOLINTEND(clang-analyzer-optin.core.EnumCastOutOfRange)
+
+  auto res = spp::serialize_header(header, dst);
+  REQUIRE(!res.has_value());
+  REQUIRE(res.error() == spp::Error::InvalidPacketType);
+  REQUIRE_THAT(dst, Catch::Matchers::RangeEquals(SentinelVector));
+}
+
+TEST_CASE("serialize_header rejects unknown Secondary Header Flag with "
+          "InvalidSecondaryHeaderFlag",
+          "[SerializeHeader]") {
+  std::array<std::byte, spp::PrimaryHeaderSize> dst = SentinelVector;
+
+  spp::PacketPrimaryHeader header = GoldenVectorHeader;
+  // NOLINTBEGIN(clang-analyzer-optin.core.EnumCastOutOfRange)
+  header.secondary_header_flag = static_cast<spp::SecondaryHeaderFlag>(
+      static_cast<std::underlying_type_t<spp::SecondaryHeaderFlag>>(
+          spp::SecondaryHeaderFlag::Present) +
+      1);
+  // NOLINTEND(clang-analyzer-optin.core.EnumCastOutOfRange)
+
+  auto res = spp::serialize_header(header, dst);
+  REQUIRE(!res.has_value());
+  REQUIRE(res.error() == spp::Error::InvalidSecondaryHeaderFlag);
+  REQUIRE_THAT(dst, Catch::Matchers::RangeEquals(SentinelVector));
+}
+
+TEST_CASE(
+    "serialize_header rejects unknown Sequence Flags with InvalidSequenceFlags",
+    "[SerializeHeader]") {
+  std::array<std::byte, spp::PrimaryHeaderSize> dst = SentinelVector;
+
+  spp::PacketPrimaryHeader header = GoldenVectorHeader;
+  // NOLINTBEGIN(clang-analyzer-optin.core.EnumCastOutOfRange)
+  header.sequence_flags = static_cast<spp::SequenceFlags>(
+      static_cast<std::underlying_type_t<spp::SequenceFlags>>(
+          spp::SequenceFlags::Unsegmented) +
+      1);
+  // NOLINTEND(clang-analyzer-optin.core.EnumCastOutOfRange)
+
+  auto res = spp::serialize_header(header, dst);
+  REQUIRE(!res.has_value());
+  REQUIRE(res.error() == spp::Error::InvalidSequenceFlags);
+  REQUIRE_THAT(dst, Catch::Matchers::RangeEquals(SentinelVector));
+}
 
 //
 // Parse header
@@ -139,7 +406,7 @@ TEST_CASE("parse_header rejects input shorter than PrimaryHeaderSize",
 TEST_CASE("parse_header rejects unsupported Packet Version Number",
           "[ParseHeader]") {
   const std::array<std::uint8_t, 3> vers = {0x20, 0x40, 0x80};
-  std::array<std::byte, spp::PrimaryHeaderSize> arr = {};
+  std::array<std::byte, spp::PrimaryHeaderSize> arr = MinVector;
 
   for (const std::uint8_t ver : vers) {
     auto ver_uint = static_cast<unsigned int>(ver);
@@ -152,7 +419,7 @@ TEST_CASE("parse_header rejects unsupported Packet Version Number",
 }
 
 TEST_CASE("parse_header parses Packet Type correctly", "[ParseHeader]") {
-  std::array<std::byte, spp::PrimaryHeaderSize> arr = {};
+  std::array<std::byte, spp::PrimaryHeaderSize> arr = MinVector;
 
   arr[0] = std::byte{0x10};
 
@@ -163,7 +430,7 @@ TEST_CASE("parse_header parses Packet Type correctly", "[ParseHeader]") {
 
 TEST_CASE("parse_header parses Secondary Header Flag correctly",
           "[ParseHeader]") {
-  std::array<std::byte, spp::PrimaryHeaderSize> arr = {};
+  std::array<std::byte, spp::PrimaryHeaderSize> arr = MinVector;
 
   arr[0] = std::byte{0x8};
 
@@ -173,7 +440,7 @@ TEST_CASE("parse_header parses Secondary Header Flag correctly",
 }
 
 TEST_CASE("parse_header parses APID correctly", "[ParseHeader]") {
-  std::array<std::byte, spp::PrimaryHeaderSize> arr = {};
+  std::array<std::byte, spp::PrimaryHeaderSize> arr = MinVector;
 
   arr[0] = std::byte{0x5};
   arr[1] = std::byte{0xAA};
@@ -184,7 +451,7 @@ TEST_CASE("parse_header parses APID correctly", "[ParseHeader]") {
 }
 
 TEST_CASE("parse_header parses Sequence Flags correctly", "[ParseHeader]") {
-  std::array<std::byte, spp::PrimaryHeaderSize> arr = {};
+  std::array<std::byte, spp::PrimaryHeaderSize> arr = MinVector;
 
   arr[2] = std::byte{0x80};
 
@@ -195,7 +462,7 @@ TEST_CASE("parse_header parses Sequence Flags correctly", "[ParseHeader]") {
 
 TEST_CASE("parse_header parses Packet Sequence Count correctly",
           "[ParseHeader]") {
-  std::array<std::byte, spp::PrimaryHeaderSize> arr = {};
+  std::array<std::byte, spp::PrimaryHeaderSize> arr = MinVector;
 
   arr[2] = std::byte{0x2A};
   arr[3] = std::byte{0xAA};
@@ -206,7 +473,7 @@ TEST_CASE("parse_header parses Packet Sequence Count correctly",
 }
 
 TEST_CASE("parse_header parses Packet Data Length correctly", "[ParseHeader]") {
-  std::array<std::byte, spp::PrimaryHeaderSize> arr = {};
+  std::array<std::byte, spp::PrimaryHeaderSize> arr = MinVector;
 
   arr[4] = std::byte{0xAA};
   arr[5] = std::byte{0xAA};
@@ -216,51 +483,27 @@ TEST_CASE("parse_header parses Packet Data Length correctly", "[ParseHeader]") {
   REQUIRE(res->data_length == 0xAAAA);
 }
 
-TEST_CASE("parse_header accepts all zeros", "[ParseHeader]") {
-  std::array<std::byte, spp::PrimaryHeaderSize> arr = {};
+TEST_CASE("parse_header parses minimum vector correctly", "[ParseHeader]") {
+  std::array<std::byte, spp::PrimaryHeaderSize> arr = MinVector;
 
   auto res = spp::parse_header(arr);
   REQUIRE(res.has_value());
-
-  REQUIRE(res->type == spp::PacketType::Telemetry);
-  REQUIRE(res->secondary_header_flag == spp::SecondaryHeaderFlag::NotPresent);
-  REQUIRE(res->apid.get() == 0);
-  REQUIRE(res->sequence_flags == spp::SequenceFlags::ContinuationSegment);
-  REQUIRE(res->sequence_count.get() == 0);
-  REQUIRE(res->data_length == 0);
+  REQUIRE(*res == MinVectorHeader);
 }
 
-TEST_CASE("parse_header accepts all ones (except Packet Version Number)",
-          "[ParseHeader]") {
-  std::array<std::byte, spp::PrimaryHeaderSize> arr = {
-      std::byte{0x1F}, std::byte{0xFF}, std::byte{0xFF},
-      std::byte{0xFF}, std::byte{0xFF}, std::byte{0xFF}};
+TEST_CASE("parse_header parses maximum vector correctly", "[ParseHeader]") {
+
+  std::array<std::byte, spp::PrimaryHeaderSize> arr = MaxVector;
 
   auto res = spp::parse_header(arr);
   REQUIRE(res.has_value());
-
-  REQUIRE(res->type == spp::PacketType::Telecommand);
-  REQUIRE(res->secondary_header_flag == spp::SecondaryHeaderFlag::Present);
-  REQUIRE(res->apid.get() == spp::ApidMax);
-  REQUIRE(res->sequence_flags == spp::SequenceFlags::Unsegmented);
-  REQUIRE(res->sequence_count.get() == spp::SequenceCountMax);
-  REQUIRE(res->data_length == std::numeric_limits<std::uint16_t>::max());
+  REQUIRE(*res == MaxVectorHeader);
 }
 
 TEST_CASE("parse_header parses golden vector correctly", "[ParseHeader]") {
-  std::array<std::byte, spp::PrimaryHeaderSize> arr = {
-      std::byte{0x15}, std::byte{0x55}, std::byte{0x55},
-      std::byte{0x55}, std::byte{0x55}, std::byte{0x55}};
-
-  auto res = spp::parse_header(arr);
+  auto res = spp::parse_header(GoldenVector);
   REQUIRE(res.has_value());
-
-  REQUIRE(res->type == spp::PacketType::Telecommand);
-  REQUIRE(res->secondary_header_flag == spp::SecondaryHeaderFlag::NotPresent);
-  REQUIRE(res->apid.get() == 0x555);
-  REQUIRE(res->sequence_flags == spp::SequenceFlags::FirstSegment);
-  REQUIRE(res->sequence_count.get() == 0x1555);
-  REQUIRE(res->data_length == 0x5555);
+  REQUIRE(*res == GoldenVectorHeader);
 }
 
 TEST_CASE("parse_header accepts input longer than PrimaryHeaderSize",
@@ -271,11 +514,5 @@ TEST_CASE("parse_header accepts input longer than PrimaryHeaderSize",
 
   auto res = spp::parse_header(arr);
   REQUIRE(res.has_value());
-
-  REQUIRE(res->type == spp::PacketType::Telemetry);
-  REQUIRE(res->secondary_header_flag == spp::SecondaryHeaderFlag::NotPresent);
-  REQUIRE(res->apid.get() == 0);
-  REQUIRE(res->sequence_flags == spp::SequenceFlags::ContinuationSegment);
-  REQUIRE(res->sequence_count.get() == 0);
-  REQUIRE(res->data_length == 0);
+  REQUIRE(*res == MinVectorHeader);
 }
