@@ -8,6 +8,10 @@
 #include <span>
 
 namespace spp {
+constexpr std::size_t PrimaryHeaderSize = 6U;
+
+constexpr std::uint8_t SupportedPacketVersionNumber = 0U;
+
 constexpr std::uint16_t ApidMax = 0x7FFU;
 constexpr std::uint16_t ApidIdlePacket = ApidMax;
 constexpr std::uint16_t SequenceCountMax = 0x3FFFU;
