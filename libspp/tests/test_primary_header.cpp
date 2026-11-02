@@ -114,7 +114,7 @@ constexpr spp::PacketPrimaryHeader MinVectorHeader = {
 constexpr std::array<std::byte, spp::PrimaryHeaderSize> MinVector = {};
 
 constexpr spp::Expected<spp::Apid, spp::Error> MaxVectorApid =
-    spp::Apid::create(spp::ApidMax);
+    spp::Apid::create(spp::ApidMax - 1);
 constexpr spp::Expected<spp::SequenceCount, spp::Error> MaxVectorSequenceCount =
     spp::SequenceCount::create(spp::SequenceCountMax);
 constexpr spp::PacketPrimaryHeader MaxVectorHeader = {
@@ -125,7 +125,7 @@ constexpr spp::PacketPrimaryHeader MaxVectorHeader = {
     .sequence_count = *MaxVectorSequenceCount,
     .data_length = 0xFFFF};
 constexpr std::array<std::byte, spp::PrimaryHeaderSize> MaxVector = {
-    std::byte{0x1F}, std::byte{0xFF}, std::byte{0xFF},
+    std::byte{0x1F}, std::byte{0xFE}, std::byte{0xFF},
     std::byte{0xFF}, std::byte{0xFF}, std::byte{0xFF}};
 
 constexpr std::byte SentinelByte = std::byte{0xAA};
@@ -327,7 +327,7 @@ TEST_CASE("serialize_header rejects empty destination buffer with "
   std::array<std::byte, 0> dst = {};
 
   auto res = spp::serialize_header(MinVectorHeader, dst);
-  REQUIRE(!res.has_value());
+  REQUIRE_FALSE(res.has_value());
   REQUIRE(res.error() == spp::Error::DestinationBufferTooShort);
 }
 
@@ -337,7 +337,7 @@ TEST_CASE("serialize_header rejects too short destination buffer with "
   std::array<std::byte, spp::PrimaryHeaderSize - 1> dst = {};
 
   auto res = spp::serialize_header(MinVectorHeader, dst);
-  REQUIRE(!res.has_value());
+  REQUIRE_FALSE(res.has_value());
   REQUIRE(res.error() == spp::Error::DestinationBufferTooShort);
 }
 
@@ -399,7 +399,7 @@ TEST_CASE("serialize_header rejects unknown Packet Type with InvalidPacketType",
   // NOLINTEND(clang-analyzer-optin.core.EnumCastOutOfRange)
 
   auto res = spp::serialize_header(header, dst);
-  REQUIRE(!res.has_value());
+  REQUIRE_FALSE(res.has_value());
   REQUIRE(res.error() == spp::Error::InvalidPacketType);
   REQUIRE_THAT(dst, Catch::Matchers::RangeEquals(SentinelVector));
 }
@@ -418,7 +418,7 @@ TEST_CASE("serialize_header rejects unknown Secondary Header Flag with "
   // NOLINTEND(clang-analyzer-optin.core.EnumCastOutOfRange)
 
   auto res = spp::serialize_header(header, dst);
-  REQUIRE(!res.has_value());
+  REQUIRE_FALSE(res.has_value());
   REQUIRE(res.error() == spp::Error::InvalidSecondaryHeaderFlag);
   REQUIRE_THAT(dst, Catch::Matchers::RangeEquals(SentinelVector));
 }
@@ -437,7 +437,7 @@ TEST_CASE(
   // NOLINTEND(clang-analyzer-optin.core.EnumCastOutOfRange)
 
   auto res = spp::serialize_header(header, dst);
-  REQUIRE(!res.has_value());
+  REQUIRE_FALSE(res.has_value());
   REQUIRE(res.error() == spp::Error::InvalidSequenceFlags);
   REQUIRE_THAT(dst, Catch::Matchers::RangeEquals(SentinelVector));
 }
@@ -450,7 +450,7 @@ TEST_CASE("parse_header rejects empty input", "[ParseHeader]") {
   std::array<std::byte, 0> arr = {};
 
   auto res = spp::parse_header(arr);
-  REQUIRE(!res.has_value());
+  REQUIRE_FALSE(res.has_value());
   REQUIRE(res.error() == spp::Error::PrimaryHeaderTooShort);
 }
 
@@ -459,7 +459,7 @@ TEST_CASE("parse_header rejects input shorter than PrimaryHeaderSize",
   std::array<std::byte, spp::PrimaryHeaderSize - 1> arr = {};
 
   auto res = spp::parse_header(arr);
-  REQUIRE(!res.has_value());
+  REQUIRE_FALSE(res.has_value());
   REQUIRE(res.error() == spp::Error::PrimaryHeaderTooShort);
 }
 
@@ -473,7 +473,7 @@ TEST_CASE("parse_header rejects unsupported Packet Version Number",
     CAPTURE(ver_uint);
     arr[0] = std::byte{ver};
     auto res = spp::parse_header(arr);
-    REQUIRE(!res.has_value());
+    REQUIRE_FALSE(res.has_value());
     REQUIRE(res.error() == spp::Error::UnsupportedPacketVersionNumber);
   }
 }
@@ -578,6 +578,35 @@ TEST_CASE("parse_header accepts input longer than PrimaryHeaderSize",
 }
 
 //
+// Conformance
+//
+
+TEST_CASE("serialize_header rejects Idle packets with Secondary Header",
+          "[Conformance]") {
+  std::array<std::byte, spp::PrimaryHeaderSize> dst = SentinelVector;
+  spp::PacketPrimaryHeader header = GoldenVectorHeader;
+  header.secondary_header_flag = spp::SecondaryHeaderFlag::Present;
+  header.apid = *spp::Apid::create(spp::ApidIdlePacket);
+
+  auto res = spp::serialize_header(header, dst);
+  REQUIRE_FALSE(res.has_value());
+  REQUIRE(res.error() == spp::Error::IdlePacketWithSecondaryHeader);
+  REQUIRE_THAT(dst, Catch::Matchers::RangeEquals(SentinelVector));
+}
+
+TEST_CASE("parse_header rejects Idle packets with Secondary Header",
+          "[Conformance]") {
+  std::array<std::byte, spp::PrimaryHeaderSize> src = GoldenVector;
+
+  src[0] = std::byte{0x1F};
+  src[1] = std::byte{0xFF};
+
+  auto res = spp::parse_header(src);
+  REQUIRE_FALSE(res.has_value());
+  REQUIRE(res.error() == spp::Error::IdlePacketWithSecondaryHeader);
+}
+
+//
 // Random roundtrips
 //
 
@@ -591,8 +620,16 @@ TEST_CASE("Random parse -> serialize roundtrip", "[Roundtrip]") {
                        std::ranges::transform(
                            vec, arr.begin(),
                            [](std::uint8_t val) { return std::byte{val}; });
-                       // Packet Version Number (3b) can't be random
+                       // Packet Version Number (3b) can't be random; reset them
                        arr[0] &= std::byte{0x1FU};
+                       if ((arr[0] & std::byte{0xFU}) == std::byte{0xFU} &&
+                           arr[1] == std::byte{0xFFU}) {
+                         // Idle Packets can't have Secondary Header, so
+                         // flip Secondary Header off, or
+                         arr[0] ^= std::byte{0x8U};
+                         // decrement APID by one
+                         // arr[1] ^= std::byte{0x1U};
+                       }
                        return arr;
                      },
                      chunk(spp::PrimaryHeaderSize,

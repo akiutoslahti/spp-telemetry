@@ -87,6 +87,11 @@ serialize_header(PacketPrimaryHeader header,
     return Unexpected(Error::InvalidSequenceFlags);
   }
 
+  if (header.secondary_header_flag == SecondaryHeaderFlag::Present &&
+      header.apid.get() == spp::ApidIdlePacket) {
+    return Unexpected(Error::IdlePacketWithSecondaryHeader);
+  }
+
   const auto packet_identification = static_cast<std::uint16_t>(
       (SupportedPacketVersionNumber << PacketVersionNumberShift) |
       (static_cast<std::uint8_t>(header.type) << PacketTypeShift) |
@@ -133,6 +138,11 @@ parse_header(std::span<const std::byte> src) noexcept {
 
   if (!apid) {
     return Unexpected(apid.error());
+  }
+
+  if (secondary_header_flag == SecondaryHeaderFlag::Present &&
+      apid->get() == ApidIdlePacket) {
+    return Unexpected(Error::IdlePacketWithSecondaryHeader);
   }
 
   const auto packet_sequence_control = read_be16(header.subspan<2, 2>());

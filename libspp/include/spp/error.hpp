@@ -13,7 +13,8 @@ enum class Error : std::uint8_t {
   DestinationBufferTooShort,
   InvalidPacketType,
   InvalidSecondaryHeaderFlag,
-  InvalidSequenceFlags
+  InvalidSequenceFlags,
+  IdlePacketWithSecondaryHeader
 };
 
 [[nodiscard]] constexpr std::string_view to_string(Error error) noexcept {
@@ -36,6 +37,8 @@ enum class Error : std::uint8_t {
     return "Invalid Secondary Header Flag";
   case Error::InvalidSequenceFlags:
     return "Invalid Sequence Flags";
+  case Error::IdlePacketWithSecondaryHeader:
+    return "Invalid packet(Idle packet with Secondary Header)";
   }
 
   return "Unknown error";
