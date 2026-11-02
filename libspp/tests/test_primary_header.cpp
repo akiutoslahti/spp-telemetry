@@ -5,6 +5,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <format>
 #include <span>
 #include <string>
 #include <type_traits>
@@ -20,6 +21,59 @@ namespace Catch {
 template <> struct StringMaker<spp::Error> {
   static std::string convert(spp::Error const &err) {
     return std::string(to_string(err));
+  }
+};
+
+template <> struct StringMaker<spp::PacketType> {
+  static std::string convert(spp::PacketType const &type) {
+    switch (type) {
+    case spp::PacketType::Telemetry:
+      return "Telemetry";
+    case spp::PacketType::Telecommand:
+      return "Telecommand";
+    }
+    return std::format("Unknown {:#x}", static_cast<unsigned int>(type));
+  }
+};
+
+template <> struct StringMaker<spp::SecondaryHeaderFlag> {
+  static std::string convert(spp::SecondaryHeaderFlag const &flag) {
+    switch (flag) {
+    case spp::SecondaryHeaderFlag::NotPresent:
+      return "NotPresent";
+    case spp::SecondaryHeaderFlag::Present:
+      return "Present";
+    }
+    return std::format("Unknown {:#x}", static_cast<unsigned int>(flag));
+  }
+};
+
+template <> struct StringMaker<spp::SequenceFlags> {
+  static std::string convert(spp::SequenceFlags const &flags) {
+    switch (flags) {
+    case spp::SequenceFlags::ContinuationSegment:
+      return "ContinuationSegment";
+    case spp::SequenceFlags::FirstSegment:
+      return "FirstSegment";
+    case spp::SequenceFlags::LastSegment:
+      return "LastSegment";
+    case spp::SequenceFlags::Unsegmented:
+      return "Unsegmented";
+    }
+    return std::format("Unknown {:#x}", static_cast<unsigned int>(flags));
+  }
+};
+
+template <> struct StringMaker<spp::PacketPrimaryHeader> {
+  static std::string convert(spp::PacketPrimaryHeader const &header) {
+    return std::format(
+        "PacketPrimaryHeader(type='{}', secondary_header_flag='{}', "
+        "apid={:#x}, "
+        "sequence_flags='{}', sequence_count={:#x}, data_length={:#x})",
+        Catch::Detail::stringify(header.type),
+        Catch::Detail::stringify(header.secondary_header_flag),
+        header.apid.get(), Catch::Detail::stringify(header.sequence_flags),
+        header.sequence_count.get(), header.data_length);
   }
 };
 } // namespace Catch
