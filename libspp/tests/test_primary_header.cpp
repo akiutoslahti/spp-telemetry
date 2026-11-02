@@ -2,18 +2,24 @@
 #include <spp/expected.hpp>
 #include <spp/primary_header.hpp>
 
+#include <algorithm>
 #include <array>
 #include <cstddef>
 #include <cstdint>
 #include <format>
+#include <limits>
 #include <span>
 #include <string>
 #include <type_traits>
 #include <utility>
+#include <vector>
 
 #include <catch2/catch_message.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/catch_tostring.hpp>
+#include <catch2/generators/catch_generators.hpp>
+#include <catch2/generators/catch_generators_adapters.hpp>
+#include <catch2/generators/catch_generators_random.hpp>
 #include <catch2/matchers/catch_matchers.hpp>
 #include <catch2/matchers/catch_matchers_range_equals.hpp>
 
@@ -569,4 +575,37 @@ TEST_CASE("parse_header accepts input longer than PrimaryHeaderSize",
   auto res = spp::parse_header(arr);
   REQUIRE(res.has_value());
   REQUIRE(*res == MinVectorHeader);
+}
+
+//
+// Random roundtrips
+//
+
+TEST_CASE("Random parse -> serialize roundtrip", "[Roundtrip]") {
+  // 1000 iterations gives near-certain coverage of every bit and every pair of
+  // bits
+  std::array<std::byte, spp::PrimaryHeaderSize> random_vector = GENERATE(
+      take(1000, map(
+                     [](std::vector<std::uint8_t> const &vec) {
+                       std::array<std::byte, spp::PrimaryHeaderSize> arr{};
+                       std::ranges::transform(
+                           vec, arr.begin(),
+                           [](std::uint8_t val) { return std::byte{val}; });
+                       // Packet Version Number (3b) can't be random
+                       arr[0] &= std::byte{0x1FU};
+                       return arr;
+                     },
+                     chunk(spp::PrimaryHeaderSize,
+                           random<std::uint8_t>(
+                               0, std::numeric_limits<std::uint8_t>::max())))));
+
+  CAPTURE(random_vector);
+  auto header = spp::parse_header(random_vector);
+  REQUIRE(header.has_value());
+
+  std::array<std::byte, spp::PrimaryHeaderSize> dst = SentinelVector;
+  auto res = spp::serialize_header(*header, dst);
+  REQUIRE(res.has_value());
+  REQUIRE(*res == spp::PrimaryHeaderSize);
+  REQUIRE_THAT(dst, Catch::Matchers::RangeEquals(random_vector));
 }
