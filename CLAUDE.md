@@ -62,7 +62,7 @@ Presets live in `CMakePresets.json`. List them with `cmake --list-presets`. The 
 
 - `cmake --preset debug && cmake --build --preset debug && ctest --preset debug`
 - `cmake --preset san && cmake --build --preset san && ctest --preset san` (Debug with ASan and UBSan)
-- `cmake --preset release && cmake --build --preset release`
+- `cmake --preset release && cmake --build --preset release && ctest --preset release`
 - `cmake --preset tidy && cmake --build --preset tidy` (clang-tidy)
 - `tools/format.sh --check` (clang-format 18 check on all tracked `*.cpp` and `*.hpp`). `tools/format.sh` without flags formats in place; that one is mine only.
 - `cd tools/spp-gen && python -m pytest && mypy --strict src`
