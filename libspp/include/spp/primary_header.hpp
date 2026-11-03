@@ -15,6 +15,7 @@ constexpr std::uint8_t SupportedPacketVersionNumber = 0U;
 constexpr std::uint16_t ApidMax = 0x7FFU;
 constexpr std::uint16_t ApidIdlePacket = ApidMax;
 constexpr std::uint16_t SequenceCountMax = 0x3FFFU;
+constexpr std::uint16_t SequenceCountModulus = SequenceCountMax + 1;
 
 enum class PacketType : std::uint8_t { Telemetry = 0, Telecommand = 1 };
 
@@ -36,6 +37,10 @@ public:
   }
 
   [[nodiscard]] constexpr std::uint16_t get() const noexcept { return m_apid; }
+
+  [[nodiscard]] constexpr std::uint16_t operator*() const noexcept {
+    return get();
+  }
 
   [[nodiscard]] bool operator==(const Apid &) const noexcept = default;
 };
@@ -65,6 +70,21 @@ public:
 
   [[nodiscard]] constexpr std::uint16_t get() const noexcept {
     return m_seq_count;
+  }
+
+  [[nodiscard]] constexpr std::uint16_t next() const noexcept {
+    return static_cast<std::uint16_t>((m_seq_count + 1) % SequenceCountModulus);
+  }
+
+  [[nodiscard]] constexpr std::uint16_t
+  distance_from(const SequenceCount &previous) const noexcept {
+    return static_cast<std::uint16_t>(
+        (m_seq_count - previous.get() + SequenceCountModulus) %
+        SequenceCountModulus);
+  }
+
+  [[nodiscard]] constexpr std::uint16_t operator*() const noexcept {
+    return get();
   }
 
   [[nodiscard]] bool operator==(const SequenceCount &) const noexcept = default;

@@ -184,6 +184,21 @@ TEST_CASE("Apid operator== works", "[Apid]") {
   STATIC_REQUIRE_FALSE(*apid_min == *apid_max);
 }
 
+TEST_CASE("Apid operator== can't throw", "[Apid]") {
+  constexpr auto apid = spp::Apid::create(1);
+
+  STATIC_REQUIRE(noexcept(std::declval<spp::Apid>().operator==(*apid)));
+}
+
+TEST_CASE("Apid can be dereferenced to its value", "[Apid]") {
+  constexpr auto apid = spp::Apid::create(0).value();
+  STATIC_REQUIRE(*apid == 0);
+}
+
+TEST_CASE("Apid operator* can't throw", "[Apid]") {
+  STATIC_REQUIRE(noexcept(std::declval<spp::Apid>().operator*()));
+}
+
 //
 // Packet Sequence Count
 //
@@ -238,6 +253,71 @@ TEST_CASE("SequenceCount operator== works", "[SequenceCount]") {
 
   STATIC_REQUIRE(*seq_count_min == *seq_count_min);
   STATIC_REQUIRE_FALSE(*seq_count_min == *seq_count_max);
+}
+
+TEST_CASE("next of 0 is 1", "[SequenceCount]") {
+  constexpr auto seq_count = spp::SequenceCount::create(0);
+
+  STATIC_REQUIRE(seq_count->next() == 1);
+}
+
+TEST_CASE("next of Max is 0", "[SequenceCount]") {
+  constexpr auto seq_count = spp::SequenceCount::create(spp::SequenceCountMax);
+
+  STATIC_REQUIRE(seq_count->next() == 0);
+}
+
+TEST_CASE("distance_from 1 to 1 is 0", "[SequenceCount]") {
+  constexpr auto current = spp::SequenceCount::create(1);
+  constexpr auto previous = spp::SequenceCount::create(1);
+
+  STATIC_REQUIRE(current->distance_from(*previous) == 0);
+}
+
+TEST_CASE("distance_from 1 to 0 is 1", "[SequenceCount]") {
+  constexpr auto current = spp::SequenceCount::create(1);
+  constexpr auto previous = spp::SequenceCount::create(0);
+
+  STATIC_REQUIRE(current->distance_from(*previous) == 1);
+}
+
+TEST_CASE("distance_from 0 to Max is 1", "[SequenceCount]") {
+  constexpr auto current = spp::SequenceCount::create(0);
+  constexpr auto previous = spp::SequenceCount::create(spp::SequenceCountMax);
+
+  STATIC_REQUIRE(current->distance_from(*previous) == 1);
+}
+
+TEST_CASE("distance_from Max to 0 is Max", "[SequenceCount]") {
+  constexpr auto current = spp::SequenceCount::create(spp::SequenceCountMax);
+  constexpr auto previous = spp::SequenceCount::create(0);
+
+  STATIC_REQUIRE(current->distance_from(*previous) == spp::SequenceCountMax);
+}
+
+TEST_CASE("SequenceCount can be dereferenced to its value", "[SequenceCount]") {
+  constexpr auto seq_count = spp::SequenceCount::create(0).value();
+  STATIC_REQUIRE(*seq_count == 0);
+}
+
+TEST_CASE("SequenceCount operator== can't throw", "[SequenceCount]") {
+  constexpr auto seq_count = spp::SequenceCount::create(1);
+
+  STATIC_REQUIRE(
+      noexcept(std::declval<spp::SequenceCount>().operator==(*seq_count)));
+}
+
+TEST_CASE("SequenceCount operator* can't throw", "[SequenceCount]") {
+  STATIC_REQUIRE(noexcept(std::declval<spp::SequenceCount>().operator*()));
+}
+
+TEST_CASE("SequenceCount next can't throw", "[SequenceCount]") {
+  STATIC_REQUIRE(noexcept(std::declval<spp::SequenceCount>().next()));
+}
+
+TEST_CASE("SequenceCount distance_from can't throw", "[SequenceCount]") {
+  STATIC_REQUIRE(noexcept(std::declval<spp::SequenceCount>().distance_from(
+      *GoldenVectorSequenceCount)));
 }
 
 //
@@ -646,3 +726,9 @@ TEST_CASE("Random parse -> serialize roundtrip", "[Roundtrip]") {
   REQUIRE(*res == spp::PrimaryHeaderSize);
   REQUIRE_THAT(dst, Catch::Matchers::RangeEquals(random_vector));
 }
+
+//
+// Misc
+//
+
+// TODO Add noexcept tests for serialize_header and parse_header
