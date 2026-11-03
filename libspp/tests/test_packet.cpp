@@ -9,6 +9,7 @@
 #include <cstdint>
 #include <limits>
 #include <span>
+#include <utility>
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers.hpp>
@@ -305,4 +306,18 @@ TEST_CASE("serialize_packet serializes into larger destination buffer",
                                       dst.size() - 1 - spp::PrimaryHeaderSize),
                Catch::Matchers::RangeEquals(packet_data));
   REQUIRE(dst.back() == InitializerSentinel);
+}
+
+//
+// Misc
+//
+
+TEST_CASE("serialize_packet can't throw", "[SerializePacket]") {
+  STATIC_REQUIRE(noexcept(spp::serialize_packet(
+      FakePacket, std::declval<std::span<std::byte> &>())));
+}
+
+TEST_CASE("parse_packet can't throw", "[ParsePacket]") {
+  STATIC_REQUIRE(
+      noexcept(spp::parse_packet(std::declval<std::span<std::byte> &>())));
 }

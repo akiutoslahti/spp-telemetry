@@ -731,4 +731,12 @@ TEST_CASE("Random parse -> serialize roundtrip", "[Roundtrip]") {
 // Misc
 //
 
-// TODO Add noexcept tests for serialize_header and parse_header
+TEST_CASE("serialize_packet can't throw", "[SerializeHeader]") {
+  STATIC_REQUIRE(noexcept(spp::serialize_header(
+      GoldenVectorHeader, std::declval<std::span<std::byte> &>())));
+}
+
+TEST_CASE("parse_packet can't throw", "[ParseHeader]") {
+  STATIC_REQUIRE(
+      noexcept(spp::parse_header(std::declval<std::span<std::byte> &>())));
+}
