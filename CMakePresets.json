@@ -11,6 +11,14 @@
       }
     },
     {
+      "name": "release",
+      "displayName": "Release",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
       "name": "debug",
       "displayName": "Debug",
       "inherits": "base",
@@ -38,6 +46,10 @@
   ],
   "buildPresets": [
     {
+      "name": "release",
+      "configurePreset": "release"
+    },
+    {
       "name": "debug",
       "configurePreset": "debug"
     },
@@ -52,14 +64,24 @@
   ],
   "testPresets": [
     {
-      "name": "debug",
-      "configurePreset": "debug",
+      "name": "base",
+      "hidden": true,
       "output": {
         "outputOnFailure": true
       },
       "execution": {
         "noTestsAction": "error"
       }
+    },
+    {
+      "name": "release",
+      "configurePreset": "release",
+      "inherits": "base"
+    },
+    {
+      "name": "debug",
+      "configurePreset": "debug",
+      "inherits": "base"
     },
     {
       "name": "san",
