@@ -14,7 +14,9 @@ enum class Error : std::uint8_t {
   InvalidPacketType,
   InvalidSecondaryHeaderFlag,
   InvalidSequenceFlags,
-  IdlePacketWithSecondaryHeader
+  IdlePacketWithSecondaryHeader,
+  TruncatedPacketDataField,
+  PacketDataLengthMismatch
 };
 
 [[nodiscard]] constexpr std::string_view to_string(Error error) noexcept {
@@ -38,7 +40,12 @@ enum class Error : std::uint8_t {
   case Error::InvalidSequenceFlags:
     return "Invalid Sequence Flags";
   case Error::IdlePacketWithSecondaryHeader:
-    return "Invalid packet(Idle packet with Secondary Header)";
+    return "Invalid packet (Idle packet with Secondary Header)";
+  case Error::TruncatedPacketDataField:
+    return "Truncated Packet Data Field";
+  case Error::PacketDataLengthMismatch:
+    return "Packet Data Length (in header) does not match length of the Packet "
+           "Data Field";
   }
 
   return "Unknown error";
