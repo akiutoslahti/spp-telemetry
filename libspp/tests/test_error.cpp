@@ -6,6 +6,11 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+TEST_CASE("NrErrors is correctly defined", "[Error]") {
+  STATIC_REQUIRE(to_string(static_cast<spp::Error>(spp::NrErrors)) ==
+                 "Unknown error");
+}
+
 TEST_CASE("Error to_string returns a correct error", "[Error]") {
   const spp::Error error = spp::Error::Internal;
   REQUIRE(to_string(error) == "Internal error");

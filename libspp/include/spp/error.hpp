@@ -19,6 +19,9 @@ enum class Error : std::uint8_t {
   PacketDataLengthMismatch
 };
 
+constexpr std::size_t NrErrors =
+    static_cast<std::size_t>(Error::PacketDataLengthMismatch) + 1;
+
 [[nodiscard]] constexpr std::string_view to_string(Error error) noexcept {
   switch (error) {
   case Error::Internal:
