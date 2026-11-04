@@ -11,4 +11,9 @@ Checks: >
   misc-*,
   portability-*
 WarningsAsErrors: '*'
-HeaderFilterRegex: '.*libspp/include/.*'
+HeaderFilterRegex: '(.*libspp/include/.*|.*tmd/include/.*)'
+CheckOptions:
+  - key: readability-identifier-length.IgnoredVariableNames
+    value: '^(fd|rc)$'
+  - key: readability-identifier-length.IgnoredParameterNames
+    value: '^(fd|rc)$'
