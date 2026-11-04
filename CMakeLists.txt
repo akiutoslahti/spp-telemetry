@@ -26,6 +26,7 @@ if (BUILD_TESTING)
     GIT_TAG        v3.16.1
     SYSTEM
   )
+  set(CATCH_CONFIG_ENABLE_OPTIONAL_STRINGMAKER ON)
   FetchContent_MakeAvailable(Catch2)
 
   list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)
