@@ -17,3 +17,5 @@ CheckOptions:
     value: '^(fd|rc)$'
   - key: readability-identifier-length.IgnoredParameterNames
     value: '^(fd|rc)$'
+  - key: misc-include-cleaner.IgnoreHeaders
+    value: '.*bits/.*'
