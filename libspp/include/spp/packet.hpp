@@ -8,6 +8,7 @@
 #include <span>
 
 namespace spp {
+constexpr std::size_t PacketDataSizeMax = 65536;
 
 struct Packet {
   // Packet Primary Header (6 octets)

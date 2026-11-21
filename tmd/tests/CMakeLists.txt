@@ -1,3 +1,3 @@
-add_executable(tmd-tests test_uniquefd.cpp test_statistics.cpp test_descriptors.cpp)
+add_executable(tmd-tests test_uniquefd.cpp test_statistics.cpp test_descriptors.cpp test_eventloop.cpp test_control.cpp test_common.cpp)
 target_link_libraries(tmd-tests PRIVATE Catch2::Catch2WithMain tmd-core project-warnings)
 catch_discover_tests(tmd-tests)

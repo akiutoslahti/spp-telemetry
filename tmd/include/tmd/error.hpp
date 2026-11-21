@@ -1,9 +1,10 @@
 #pragma once
 
 #include <cstdint>
-#include <format>
 #include <string_view>
 #include <system_error>
+
+#include <spp/expected.hpp>
 
 namespace tmd {
 enum class ErrorOrigin : std::uint8_t {
@@ -14,7 +15,10 @@ enum class ErrorOrigin : std::uint8_t {
   SyscallSignalfd,
   SyscallEpollCreate1,
   SyscallListen,
-  ControlSocketPathValidation
+  ControlSocketPathValidation,
+  EpollCtlAdd,
+  EpollCtlMod,
+  EpollWait,
 };
 
 [[nodiscard]] constexpr std::string_view
@@ -36,6 +40,12 @@ to_string(ErrorOrigin origin) noexcept {
     return "system call: listen()";
   case tmd::ErrorOrigin::ControlSocketPathValidation:
     return "control socket: path validation";
+  case tmd::ErrorOrigin::EpollCtlAdd:
+    return "system call: epoll_ctl(..., EPOLL_CTL_ADD, ...)";
+  case tmd::ErrorOrigin::EpollCtlMod:
+    return "system call: epoll_ctl(..., EPOLL_CTL_MOD, ...)";
+  case tmd::ErrorOrigin::EpollWait:
+    return "system call: epoll_wait()";
   }
   return "unknown origin";
 }
@@ -47,4 +57,6 @@ struct Error {
   [[nodiscard]] friend bool operator==(const Error &,
                                        const Error &) noexcept = default;
 };
+
+spp::Unexpected<Error> capture_errno(ErrorOrigin origin);
 } // namespace tmd

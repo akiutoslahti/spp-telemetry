@@ -16,15 +16,6 @@
 #include <sys/un.h>
 #include <system_error>
 
-namespace {
-spp::Unexpected<tmd::Error> capture_errno(tmd::ErrorOrigin origin) {
-  const int errno_copy = errno;
-  return spp::Unexpected(tmd::Error{
-      .origin = origin,
-      .condition = std::system_category().default_error_condition(errno_copy)});
-}
-} // namespace
-
 namespace tmd {
 spp::Expected<UniqueFd, Error> create_udp_socket(std::uint16_t port) {
   UniqueFd fd =

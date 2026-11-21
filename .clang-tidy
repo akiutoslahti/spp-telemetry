@@ -14,8 +14,8 @@ WarningsAsErrors: '*'
 HeaderFilterRegex: '(.*libspp/include/.*|.*tmd/include/.*)'
 CheckOptions:
   - key: readability-identifier-length.IgnoredVariableNames
-    value: '^(fd|rc)$'
+    value: '^(fd|rc|it)$'
   - key: readability-identifier-length.IgnoredParameterNames
-    value: '^(fd|rc)$'
+    value: '^(fd|rc|it)$'
   - key: misc-include-cleaner.IgnoreHeaders
     value: '.*bits/.*'

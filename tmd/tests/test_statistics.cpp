@@ -11,6 +11,8 @@
 #include <optional>
 #include <string>
 
+#include "test_common.hpp"
+
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/catch_tostring.hpp>
 
@@ -23,23 +25,6 @@ template <> struct StringMaker<tmd::StatisticsEntry> {
 } // namespace Catch
 
 namespace {
-constexpr spp::Expected<spp::Apid, spp::Error> FakeApid =
-    spp::Apid::create(0x0);
-constexpr spp::Expected<spp::SequenceCount, spp::Error> FakeSequenceCount =
-    spp::SequenceCount::create(0x0);
-constexpr spp::PacketPrimaryHeader FakeHeader = {
-    .type = spp::PacketType::Telemetry,
-    .secondary_header_flag = spp::SecondaryHeaderFlag::NotPresent,
-    .apid = *FakeApid,
-    .sequence_flags = spp::SequenceFlags::Unsegmented,
-    .sequence_count = *FakeSequenceCount,
-    .data_length = 0x0};
-constexpr std::array<std::byte, 1> FakePacketData = {std::byte{0xAA}};
-constexpr spp::Packet FakePacket =
-    spp::Packet{.header = FakeHeader, .packet_data = FakePacketData};
-constexpr std::size_t FakePacketSize =
-    spp::PrimaryHeaderSize + FakePacketData.size();
-
 constexpr tmd::StatisticsEntry EmptyStatEntry = {.nr_packets = 0,
                                                  .nr_bytes = 0,
                                                  .nr_gap_events = 0,
@@ -58,7 +43,7 @@ public:
 TEST_CASE_METHOD(StatisticsFixture,
                  "Get returns nullopt for APID that has not been seen",
                  "[Statistics]") {
-  REQUIRE(stats.get(*FakeApid) == std::nullopt);
+  REQUIRE(stats.get(*tmdtest::FakeApid) == std::nullopt);
 }
 
 TEST_CASE_METHOD(
@@ -68,10 +53,10 @@ TEST_CASE_METHOD(
   auto expected = EmptyStatEntry;
 
   expected.nr_packets = 1;
-  expected.nr_bytes = FakePacketSize;
-  stats.record(FakePacket);
+  expected.nr_bytes = tmdtest::FakePacketSize;
+  stats.record(tmdtest::FakePacket);
 
-  REQUIRE(stats.get(*FakeApid) == expected);
+  REQUIRE(stats.get(*tmdtest::FakeApid) == expected);
 }
 
 TEST_CASE_METHOD(StatisticsFixture,
@@ -79,16 +64,16 @@ TEST_CASE_METHOD(StatisticsFixture,
                  "[Statistics]") {
   auto expected = EmptyStatEntry;
   expected.nr_packets = 2;
-  expected.nr_bytes = 2 * FakePacketSize;
+  expected.nr_bytes = 2 * tmdtest::FakePacketSize;
 
-  stats.record(FakePacket);
+  stats.record(tmdtest::FakePacket);
 
-  auto packet = FakePacket;
+  auto packet = tmdtest::FakePacket;
   packet.header.sequence_count =
       *spp::SequenceCount::create(packet.header.sequence_count.next());
   stats.record(packet);
 
-  REQUIRE(stats.get(*FakeApid) == expected);
+  REQUIRE(stats.get(*tmdtest::FakeApid) == expected);
 }
 
 TEST_CASE_METHOD(StatisticsFixture,
@@ -96,18 +81,18 @@ TEST_CASE_METHOD(StatisticsFixture,
                  "[Statistics]") {
   auto expected = EmptyStatEntry;
   expected.nr_packets = 2;
-  expected.nr_bytes = 2 * FakePacketSize;
+  expected.nr_bytes = 2 * tmdtest::FakePacketSize;
   expected.nr_gap_events = 1;
   expected.nr_lost_packets = 2;
 
-  stats.record(FakePacket);
+  stats.record(tmdtest::FakePacket);
 
-  auto packet = FakePacket;
+  auto packet = tmdtest::FakePacket;
   packet.header.sequence_count =
-      *spp::SequenceCount::create(*FakeSequenceCount.value() + 3);
+      *spp::SequenceCount::create(*tmdtest::FakeSequenceCount.value() + 3);
   stats.record(packet);
 
-  REQUIRE(stats.get(*FakeApid) == expected);
+  REQUIRE(stats.get(*tmdtest::FakeApid) == expected);
 }
 
 TEST_CASE_METHOD(
@@ -116,9 +101,9 @@ TEST_CASE_METHOD(
     "[Statistics]") {
   auto expected = EmptyStatEntry;
   expected.nr_packets = 2;
-  expected.nr_bytes = 2 * FakePacketSize;
+  expected.nr_bytes = 2 * tmdtest::FakePacketSize;
 
-  auto packet = FakePacket;
+  auto packet = tmdtest::FakePacket;
   packet.header.sequence_count =
       *spp::SequenceCount::create(spp::SequenceCountMax);
   stats.record(packet);
@@ -127,7 +112,7 @@ TEST_CASE_METHOD(
       *spp::SequenceCount::create(packet.header.sequence_count.next());
   stats.record(packet);
 
-  REQUIRE(stats.get(*FakeApid) == expected);
+  REQUIRE(stats.get(*tmdtest::FakeApid) == expected);
 }
 
 TEST_CASE_METHOD(StatisticsFixture,
@@ -135,29 +120,29 @@ TEST_CASE_METHOD(StatisticsFixture,
                  "[Statistics]") {
   auto expected = EmptyStatEntry;
   expected.nr_packets = 2;
-  expected.nr_bytes = 2 * FakePacketSize;
+  expected.nr_bytes = 2 * tmdtest::FakePacketSize;
   expected.nr_duplicates = 1;
 
-  stats.record(FakePacket);
-  stats.record(FakePacket);
+  stats.record(tmdtest::FakePacket);
+  stats.record(tmdtest::FakePacket);
 
-  REQUIRE(stats.get(*FakeApid) == expected);
+  REQUIRE(stats.get(*tmdtest::FakeApid) == expected);
 }
 
 TEST_CASE_METHOD(StatisticsFixture, "Two APIDs stay independent of each other",
                  "[Statistics]") {
   auto expected = EmptyStatEntry;
   expected.nr_packets = 1;
-  expected.nr_bytes = FakePacketSize;
+  expected.nr_bytes = tmdtest::FakePacketSize;
 
-  stats.record(FakePacket);
+  stats.record(tmdtest::FakePacket);
 
-  auto packet = FakePacket;
-  auto second_apid = spp::Apid::create(*FakeApid.value() + 1);
+  auto packet = tmdtest::FakePacket;
+  auto second_apid = spp::Apid::create(*tmdtest::FakeApid.value() + 1);
   packet.header.apid = *second_apid;
   stats.record(packet);
 
-  REQUIRE(stats.get(*FakeApid) == expected);
+  REQUIRE(stats.get(*tmdtest::FakeApid) == expected);
   REQUIRE(stats.get(*second_apid) == expected);
 }
 
@@ -165,15 +150,15 @@ TEST_CASE_METHOD(StatisticsFixture, "Idle Packet: gaps ignored",
                  "[Statistics]") {
   auto expected = EmptyStatEntry;
   expected.nr_packets = 2;
-  expected.nr_bytes = 2 * FakePacketSize;
+  expected.nr_bytes = 2 * tmdtest::FakePacketSize;
 
-  auto packet = FakePacket;
+  auto packet = tmdtest::FakePacket;
   auto idle_apid = spp::Apid::create(spp::ApidIdlePacket);
   packet.header.apid = *idle_apid;
   stats.record(packet);
 
   packet.header.sequence_count =
-      *spp::SequenceCount::create(*FakeSequenceCount.value() + 3);
+      *spp::SequenceCount::create(*tmdtest::FakeSequenceCount.value() + 3);
   stats.record(packet);
 
   REQUIRE(stats.get(*idle_apid) == expected);
@@ -183,9 +168,9 @@ TEST_CASE_METHOD(StatisticsFixture, "Idle Packet: duplicates ignored",
                  "[Statistics]") {
   auto expected = EmptyStatEntry;
   expected.nr_packets = 2;
-  expected.nr_bytes = 2 * FakePacketSize;
+  expected.nr_bytes = 2 * tmdtest::FakePacketSize;
 
-  auto packet = FakePacket;
+  auto packet = tmdtest::FakePacket;
   auto idle_apid = spp::Apid::create(spp::ApidIdlePacket);
   packet.header.apid = *idle_apid;
   stats.record(packet);
@@ -214,24 +199,24 @@ TEST_CASE_METHOD(StatisticsFixture,
                  "[Statistics]") {
   auto expected_stats = EmptyStatEntry;
   expected_stats.nr_packets = 1;
-  expected_stats.nr_bytes = FakePacketSize;
+  expected_stats.nr_bytes = tmdtest::FakePacketSize;
   expected_stats.nr_gap_events = 0;
   expected_stats.nr_lost_packets = 0;
   std::array<std::uint64_t, spp::NrErrors> expected_errors = {};
   expected_errors[static_cast<size_t>(spp::Error::InvalidPacketType)] = 1;
 
-  stats.record(FakePacket);
+  stats.record(tmdtest::FakePacket);
   stats.record(spp::Unexpected(spp::Error::DestinationBufferTooShort));
 
   stats.reset();
 
-  auto packet = FakePacket;
+  auto packet = tmdtest::FakePacket;
   packet.header.sequence_count =
-      *spp::SequenceCount::create(*FakeSequenceCount.value() + 3);
+      *spp::SequenceCount::create(*tmdtest::FakeSequenceCount.value() + 3);
   stats.record(packet);
   stats.record(spp::Unexpected(spp::Error::InvalidPacketType));
 
-  REQUIRE(stats.get(*FakeApid) == expected_stats);
+  REQUIRE(stats.get(*tmdtest::FakeApid) == expected_stats);
   REQUIRE(stats.get_errors() == expected_errors);
 }
 
@@ -241,20 +226,20 @@ TEST_CASE_METHOD(StatisticsFixture, "Report: empty", "[Statistics]") {
 
 TEST_CASE_METHOD(StatisticsFixture, "Report: two in-order packets, no errors",
                  "[Statistics]") {
-  stats.record(FakePacket);
+  stats.record(tmdtest::FakePacket);
 
-  auto packet = FakePacket;
+  auto packet = tmdtest::FakePacket;
   packet.header.sequence_count =
       *spp::SequenceCount::create(packet.header.sequence_count.next());
   stats.record(packet);
 
   auto entry = EmptyStatEntry;
   entry.nr_packets = 2;
-  entry.nr_bytes = 2 * FakePacketSize;
+  entry.nr_bytes = 2 * tmdtest::FakePacketSize;
 
   REQUIRE(stats.report() ==
           std::format("Valid packets:\n  APID={:#x}, {}\nErrors: None",
-                      *FakeApid.value(), to_string(entry)));
+                      *tmdtest::FakeApid.value(), to_string(entry)));
 }
 
 TEST_CASE_METHOD(StatisticsFixture,
@@ -270,11 +255,11 @@ TEST_CASE_METHOD(
     StatisticsFixture,
     "Report: two APIDs and two error kinds, sorted, with separators",
     "[Statistics]") {
-  auto packet = FakePacket;
+  auto packet = tmdtest::FakePacket;
   packet.header.apid = *spp::Apid::create(spp::ApidMax);
   stats.record(packet);
 
-  packet = FakePacket;
+  packet = tmdtest::FakePacket;
   stats.record(packet);
   packet.header.sequence_count = *spp::SequenceCount::create(4);
   stats.record(packet);
