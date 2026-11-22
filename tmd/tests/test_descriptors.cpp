@@ -78,7 +78,6 @@ TEST_CASE("UDP port already in use", "[UdpSocket]") {
 }
 
 TEST_CASE("Signalfd with an invalid signal number", "[Signalfd]") {
-  // NOLINTNEXTLINE(readability-magic-numbers)
   auto fd = tmd::create_signalfd(std::array<const int, 1>{999});
   REQUIRE_FALSE(fd);
   REQUIRE(fd.error().origin == tmd::ErrorOrigin::LibcCallSigaddset);

@@ -176,7 +176,6 @@ TEST_CASE_METHOD(EventLoopFixture, "EventLoop run smoketest", "[EventLoop]") {
   REQUIRE(eventloop_res);
 
   std::string reply;
-  // NOLINTNEXTLINE(readability-magic-numbers)
   std::array<char, 128> read_buf = {};
   for (;;) {
     const ssize_t rc = read(conn_fd.get(), read_buf.data(), sizeof(read_buf));

@@ -1,4 +1,4 @@
-add_library(tmd-core STATIC src/descriptors.cpp src/eventloop.cpp src/control.cpp src/error.cpp)
+add_library(tmd-core STATIC src/descriptors.cpp src/eventloop.cpp src/control.cpp src/error.cpp src/options.cpp)
 target_link_libraries(tmd-core PUBLIC spp)
 target_link_libraries(tmd-core PRIVATE project-warnings)
 target_compile_features(tmd-core PUBLIC cxx_std_20)

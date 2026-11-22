@@ -18,4 +18,4 @@ CheckOptions:
   - key: readability-identifier-length.IgnoredParameterNames
     value: '^(fd|rc|it)$'
   - key: misc-include-cleaner.IgnoreHeaders
-    value: '.*bits/.*'
+    value: '(.*bits/.*|sys/syslog\.h)'

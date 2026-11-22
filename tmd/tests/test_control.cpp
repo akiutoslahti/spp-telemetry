@@ -111,7 +111,6 @@ TEST_CASE_METHOD(ExecuteCommandFixture,
                  "View into 'stats\\nreset' behaves like stats",
                  "[ExecuteCommand]") {
   std::string_view cmd = "stats\nreset";
-  // NOLINTNEXTLINE(readability-magic-numbers)
   cmd.remove_suffix(6);
   REQUIRE(tmd::execute_command(cmd, stats) ==
           "Valid packets: None\nErrors: None\n");
