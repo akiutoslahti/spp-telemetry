@@ -4,6 +4,11 @@ target_link_libraries(tmd-core PRIVATE project-warnings)
 target_compile_features(tmd-core PUBLIC cxx_std_20)
 target_include_directories(tmd-core PUBLIC include)
 
+add_executable(tmd src/main.cpp)
+target_link_libraries(tmd PRIVATE tmd-core project-warnings)
+
+install(TARGETS tmd RUNTIME)
+
 if (BUILD_TESTING)
   add_subdirectory(tests)
 endif()

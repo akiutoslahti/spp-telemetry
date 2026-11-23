@@ -11,8 +11,6 @@
 
 namespace {
 bool fd_is_closed(int fd) {
-  // no other way around this call
-  // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg)
   const int rc = fcntl(fd, F_GETFD);
   return rc == -1 && errno == EBADF;
 }

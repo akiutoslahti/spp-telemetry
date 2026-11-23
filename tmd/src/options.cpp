@@ -137,4 +137,12 @@ parse_cli_args(std::span<const std::string_view> args) {
   return std::variant<Config, HelpRequested>(config);
 }
 
+std::string_view loglvl_to_string(int log_level) {
+  const auto *it = std::ranges::find(log_levels, log_level,
+                                     &decltype(log_levels)::value_type::second);
+  if (it != log_levels.end()) {
+    return it->first;
+  }
+  return "Unknown log level";
+}
 } // namespace tmd

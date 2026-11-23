@@ -313,3 +313,19 @@ TEST_CASE("Parse all successfully #2", "[ParseCliArgs]") {
                                      .pid_file = "/tmp/tmd/tmd.pid"};
   REQUIRE(config == expected);
 }
+
+TEST_CASE("loglvl_to_string prints correct values", "[LogLevelToString]") {
+  auto [value, level] = GENERATE(
+      std::make_pair("emerg", LOG_EMERG), std::make_pair("alert", LOG_ALERT),
+      std::make_pair("crit", LOG_CRIT), std::make_pair("err", LOG_ERR),
+      std::make_pair("warning", LOG_WARNING),
+      std::make_pair("notice", LOG_NOTICE), std::make_pair("info", LOG_INFO),
+      std::make_pair("debug", LOG_DEBUG));
+
+  REQUIRE(tmd::loglvl_to_string(level) == value);
+  REQUIRE(tmd::loglvl_to_string(8) == "Unknown log level");
+}
+
+TEST_CASE("loglvl_to_string prints unkown log level", "[LogLevelToString]") {
+  REQUIRE(tmd::loglvl_to_string(8) == "Unknown log level");
+}

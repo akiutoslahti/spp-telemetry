@@ -60,4 +60,6 @@ struct ParseError {
 
 spp::Expected<std::variant<Config, HelpRequested>, ParseError>
 parse_cli_args(std::span<const std::string_view> args);
+
+std::string_view loglvl_to_string(int log_level);
 } // namespace tmd
